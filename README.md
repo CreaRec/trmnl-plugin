@@ -167,7 +167,7 @@ CI on `main` publishes `ghcr.io/crearec/trmnl-plugin:main` (+ `sha-*`) and SSH-d
 Manual:
 
 1. Copy `deploy/nginx-trmnl.conf` into `/etc/nginx/snippets/` and `include` it from the crearec.app site.
-   **Debian must update this snippet and reload nginx** (`sudo nginx -t && sudo systemctl reload nginx`) so `/trmnl/<uuid>` is routed, bare `/trmnl` returns 401, and public `/trmnl/studio` stays **removed** (Studio is Tailscale-only).
+   **Debian must update this snippet and reload nginx** (`sudo nginx -t && sudo systemctl reload nginx`) so `/trmnl/<uuid>` is routed, bare `/trmnl` returns 401, and public `/trmnl/studio` stays **removed** (Studio is Tailscale-only). Keep the UUID `location ~` regex **double-quoted** (`"^/trmnl/([0-9a-fA-F-]{36})$"`); unquoted `{36}` fails `nginx -t` under PCRE.
 2. Place `deploy/docker-compose.yml` at `/home/crearec/trmnl-plugin/docker-compose.yml`.
 3. Ensure `/home/crearec/trmnl-plugin/.env` exists with `TRMNL_POLL_TOKEN=<uuid>` (`env_file: .env` in compose). Never commit the real token.
 4. Ensure `./data` exists next to compose (Studio layout volume) — `mkdir -p data`.
