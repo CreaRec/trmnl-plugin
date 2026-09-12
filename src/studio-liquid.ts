@@ -21,7 +21,8 @@ export function weatherLayoutVariant(
 }
 
 /**
- * Font/icon metrics from cell span — keeps icon + temp from colliding/clipping.
+ * Font/icon metrics from cell span — fill large blocks, shrink on small ones.
+ * Treats w×h as a mini-grid budget so icon + temp use space without overlap.
  * Studio JS mirrors the same formula; values are baked as CSS variables.
  */
 export function weatherSizeMetrics(
@@ -31,33 +32,57 @@ export function weatherSizeMetrics(
   const ww = Math.max(1, Math.trunc(w));
   const hh = Math.max(1, Math.trunc(h));
   const short = Math.min(ww, hh);
-  // Cell ≈ 66.7×60; subtract outline padding + title row when tall enough
-  const contentW = Math.max(20, ww * 66.7 - 20);
-  const titleReserve = hh <= 2 || ww <= 2 ? 0 : 18;
-  const contentH = Math.max(18, hh * 60 - 16 - titleReserve);
+  // Cell ≈ 66.7×60; tight padding so content can fill the block
+  const contentW = Math.max(20, ww * 66.7 - 12);
+  const titleReserve = hh <= 2 || ww <= 2 ? 0 : 14;
+  const contentH = Math.max(18, hh * 60 - 8 - titleReserve);
 
-  // Icon: grow with span but never claim more than ~28% of content width / 55% height
+  // Icon: short blocks stay compact; taller blocks claim most of the body height
   let iconPx = Math.round(10 + short * 5 + Math.min(ww, 5) * 1.25);
-  iconPx = Math.min(iconPx, Math.floor(contentW * 0.28), Math.floor(contentH * 0.55));
+  if (hh >= 3) iconPx = Math.round(Math.max(iconPx, contentH * (hh >= 4 ? 0.58 : 0.45)));
+  const iconWCap = hh >= 4 ? 0.48 : hh >= 3 ? 0.4 : 0.3;
+  const iconHCap = hh >= 4 ? 0.72 : hh >= 3 ? 0.62 : 0.5;
+  iconPx = Math.min(
+    iconPx,
+    Math.floor(contentW * iconWCap),
+    Math.floor(contentH * iconHCap),
+  );
   iconPx = Math.max(12, iconPx);
 
-  const gapPx = Math.round(Math.min(8, Math.max(2, 1 + short)));
+  const gapPx = Math.round(Math.min(10, Math.max(2, short)));
   const remaining = Math.max(14, contentW - iconPx - gapPx);
-  // "34°C" ≈ 4 glyphs; display fonts are wide — ~18px per em-width unit
-  const tempFromWidth = remaining / (4 * 18);
-  const tempFromSpan = 0.62 + (ww - 1) * 0.12 + (hh - 1) * 0.06;
+  // "36°C" ≈ 4 glyphs; ~15px per em-width on device fonts
+  const tempFromWidth = remaining / (4 * 15);
+  const tempFromSpan = 0.55 + (ww - 1) * 0.14 + (hh - 1) * 0.22;
+  const tempFromHeight = contentH / (hh >= 4 ? 40 : 52);
+  // Compact / short blocks stay small; taller cells fill vertical space
+  const tempCap =
+    ww <= 2 || (ww <= 3 && hh <= 2)
+      ? 1.05
+      : hh <= 2
+        ? 1.35
+        : hh <= 3
+          ? 1.9
+          : 3.1;
+  const desired = Math.min(
+    tempCap,
+    Math.max(0.72, (tempFromSpan + tempFromHeight) / 2),
+  );
   const tempEm =
-    Math.round(
-      Math.min(1.75, Math.max(0.72, Math.min(tempFromWidth, tempFromSpan))) * 100,
-    ) / 100;
+    Math.round(Math.min(desired, tempFromWidth) * 100) / 100;
   const metaEm =
-    Math.round(Math.min(0.9, Math.max(0.55, 0.5 + short * 0.06)) * 100) / 100;
+    Math.round(
+      Math.min(1.1, Math.max(0.55, 0.5 + short * 0.07 + Math.max(0, hh - 2) * 0.05)) *
+        100,
+    ) / 100;
   return { iconPx, tempEm, gapPx, metaEm };
 }
 
 export function weatherSizeStyleAttr(w: number, h: number): string {
   const m = weatherSizeMetrics(w, h);
-  return `--cf-icon:${m.iconPx}px;--cf-temp:${m.tempEm}em;--cf-gap:${m.gapPx}px;--cf-meta:${m.metaEm}em`;
+  const ww = Math.max(1, Math.trunc(w));
+  const hh = Math.max(1, Math.trunc(h));
+  return `--cf-cols:${ww};--cf-rows:${hh};--cf-icon:${m.iconPx}px;--cf-temp:${m.tempEm}em;--cf-gap:${m.gapPx}px;--cf-meta:${m.metaEm}em`;
 }
 
 function weatherSnippet(
@@ -76,15 +101,15 @@ function weatherSnippet(
     ? `{% if ${prefix}.temp_c %}{{ ${prefix}.temp_c | round }}°C{% elsif ${prefix}.high_c %}{{ ${prefix}.high_c | round }}°C{% else %}—{% endif %}`
     : `{% if ${prefix}.temp_c %}{{ ${prefix}.temp_c | round }}°C{% else %}—{% endif %}`;
 
-  return `<div class="outline rounded--medium p--2 flex flex--col gap--small creafridge-weather creafridge-weather--${variant}" style="height:100%;box-sizing:border-box;overflow:hidden;${sizeStyle}" data-w="${w}" data-h="${h}">
+  return `<div class="outline rounded--medium creafridge-weather creafridge-weather--${variant}" style="height:100%;box-sizing:border-box;overflow:hidden;${sizeStyle}" data-w="${w}" data-h="${h}">
   <span class="label creafridge-weather__title">${label}</span>
-  <div class="creafridge-weather__body flex flex--center-y">
+  <div class="creafridge-weather__body">
     <img
       class="image--adaptive creafridge-weather__icon"
       alt="{{ ${prefix}.condition | default: '${altDefault}' }}"
       src="{{ ${prefix}.icon | default: 'https://trmnl.com/images/plugins/weather/wi-na.svg' }}"
     >
-    <div class="creafridge-weather__text flex flex--col gap--xsmall grow">
+    <div class="creafridge-weather__text">
       <span class="value creafridge-weather__temp">
         ${tempLiquid}
       </span>
@@ -125,32 +150,28 @@ function trashSnippet(): string {
 }
 
 function calendarSnippet(): string {
-  return `<div class="outline rounded--medium p--2 flex flex--col gap--small creafridge-calendar" style="height:100%;box-sizing:border-box;overflow:hidden;">
+  return `<div class="outline rounded--medium creafridge-calendar" style="height:100%;box-sizing:border-box;overflow:hidden;">
   {% if days and days.size > 0 %}
-    <div class="flex flex--col gap--xsmall creafridge-calendar__list">
+    <div class="creafridge-calendar__list">
       {% for day in days %}
-        <div class="creafridge-calendar__row flex flex--row gap--xsmall">
-          <span class="label creafridge-calendar__day {% if day.is_today %}text--red{% endif %}">{{ day.label }}</span>
-          <div class="creafridge-calendar__events flex flex--col gap--xsmall grow">
-            {% if day.events and day.events.size > 0 %}
-              {% for event in day.events %}
-                <span class="title title--small">{{ event.time_label }} {{ event.title }}</span>
-              {% endfor %}
-            {% else %}
-              <span class="description">—</span>
-            {% endif %}
-          </div>
+        <span class="label creafridge-calendar__day {% if day.is_today %}text--red{% endif %}">{{ day.label }}</span>
+        <div class="creafridge-calendar__events">
+          {% if day.events and day.events.size > 0 %}
+            {% for event in day.events %}
+              <span class="title title--small">{{ event.time_label }} {{ event.title }}</span>
+            {% endfor %}
+          {% else %}
+            <span class="description">—</span>
+          {% endif %}
         </div>
       {% endfor %}
     </div>
   {% elsif events and events.size > 0 %}
-    <div class="flex flex--col gap--xsmall creafridge-calendar__list">
+    <div class="creafridge-calendar__list">
       {% for event in events %}
-        <div class="creafridge-calendar__row flex flex--row gap--xsmall">
-          <span class="label creafridge-calendar__day">{{ event.day_label }}</span>
-          <div class="creafridge-calendar__events grow">
-            <span class="title title--small">{{ event.time_label }} {{ event.title }}</span>
-          </div>
+        <span class="label creafridge-calendar__day">{{ event.day_label }}</span>
+        <div class="creafridge-calendar__events">
+          <span class="title title--small">{{ event.time_label }} {{ event.title }}</span>
         </div>
       {% endfor %}
     </div>
@@ -192,30 +213,52 @@ function gridPlacement(block: LayoutBlock): string {
 
 /** Shared device + Studio styles for weather variants, battery, trash, calendar. */
 export const CREAFRIDGE_BLOCK_CSS = `
-  .creafridge-weather { min-width: 0; min-height: 0; container-type: size; }
-  .creafridge-weather__body {
+  .creafridge-weather {
     display: flex;
-    flex-direction: row;
-    align-items: center;
+    flex-direction: column;
     min-width: 0;
+    min-height: 0;
+    container-type: size;
+    padding: 4px;
+    gap: 2px;
+    box-sizing: border-box;
+  }
+  .creafridge-weather__title { flex: 0 0 auto; text-align: left; }
+  .creafridge-weather__body {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    justify-items: start;
+    align-content: center;
+    min-width: 0;
+    min-height: 0;
     flex: 1 1 auto;
-    gap: var(--cf-gap, 8px);
+    gap: var(--cf-gap, 6px);
     overflow: hidden;
+    width: 100%;
   }
   .creafridge-weather__icon {
-    width: min(var(--cf-icon, 28px), 28cqmin);
-    height: min(var(--cf-icon, 28px), 28cqmin);
-    max-width: 32%;
+    width: var(--cf-icon, 28px);
+    height: var(--cf-icon, 28px);
+    max-width: none;
+    max-height: 85%;
     flex-shrink: 0;
     object-fit: contain;
+    justify-self: start;
+    align-self: center;
   }
   .creafridge-weather__text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
     min-width: 0;
-    flex: 1 1 auto;
     overflow: hidden;
+    text-align: left;
+    justify-self: stretch;
+    align-self: center;
   }
   .creafridge-weather__temp {
-    font-size: min(var(--cf-temp, 1.4em), 22cqw) !important;
+    font-size: var(--cf-temp, 1.4em) !important;
     line-height: 1.05 !important;
     min-width: 0;
     max-width: 100%;
@@ -225,12 +268,14 @@ export const CREAFRIDGE_BLOCK_CSS = `
   }
   .creafridge-weather .creafridge-weather__temp.value,
   .creafridge-weather span.creafridge-weather__temp {
-    font-size: min(var(--cf-temp, 1.4em), 22cqw) !important;
+    font-size: var(--cf-temp, 1.4em) !important;
   }
   .creafridge-weather img.creafridge-weather__icon {
-    width: min(var(--cf-icon, 28px), 28cqmin) !important;
-    height: min(var(--cf-icon, 28px), 28cqmin) !important;
-    max-width: 32% !important;
+    width: var(--cf-icon, 28px) !important;
+    height: var(--cf-icon, 28px) !important;
+    max-width: none !important;
+    max-height: 85% !important;
+    object-fit: contain !important;
   }
   .creafridge-weather__meta {
     font-size: var(--cf-meta, 0.85em);
@@ -239,12 +284,22 @@ export const CREAFRIDGE_BLOCK_CSS = `
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .creafridge-weather--tall .creafridge-weather__body { flex-direction: column; align-items: center; text-align: center; }
-  .creafridge-weather--tall .creafridge-weather__text { align-items: center; }
-  .creafridge-weather--wide .creafridge-weather__body { flex-direction: row; align-items: center; }
+  .creafridge-weather--tall .creafridge-weather__body {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    align-content: center;
+    text-align: center;
+  }
+  .creafridge-weather--tall .creafridge-weather__text { align-items: center; text-align: center; }
+  .creafridge-weather--tall .creafridge-weather__title { text-align: center; }
+  .creafridge-weather--wide .creafridge-weather__body { grid-template-columns: auto 1fr; }
   .creafridge-weather--compact .creafridge-weather__title,
   .creafridge-weather--compact .creafridge-weather__meta { display: none; }
-  .creafridge-weather--compact .creafridge-weather__body { justify-content: center; }
+  .creafridge-weather--compact .creafridge-weather__body {
+    grid-template-columns: auto auto;
+    justify-content: center;
+    justify-items: center;
+  }
   .creafridge-battery-cell,
   .creafridge-trash-cell {
     display: flex;
@@ -260,17 +315,41 @@ export const CREAFRIDGE_BLOCK_CSS = `
   .creafridge-battery--low { color: #c0392b; }
   .creafridge-battery--low .creafridge-battery__seg.is-filled { fill: #c0392b; }
   .creafridge-trash { flex-shrink: 0; display: block; color: #c0392b; }
-  .creafridge-calendar { text-align: left; align-items: stretch; min-width: 0; }
-  .creafridge-calendar__list { width: 100%; text-align: left; }
-  .creafridge-calendar__row { align-items: flex-start; width: 100%; text-align: left; }
-  .creafridge-calendar__day {
-    flex: 0 0 auto;
-    min-width: 5.5em;
+  .creafridge-calendar {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+    align-items: stretch;
+    min-width: 0;
+    min-height: 0;
+    padding: 4px;
+    gap: 2px;
+    box-sizing: border-box;
+  }
+  .creafridge-calendar__list {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 8px;
+    row-gap: 3px;
+    align-items: start;
+    justify-items: start;
+    width: 100%;
     text-align: left;
   }
-  .creafridge-calendar__events {
+  .creafridge-calendar__day {
+    grid-column: 1;
     min-width: 0;
     text-align: left;
+    white-space: nowrap;
+  }
+  .creafridge-calendar__events {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+    text-align: left;
+    justify-self: stretch;
   }
 `.trim();
 

@@ -45,16 +45,21 @@ describe("weatherLayoutVariant", () => {
 });
 
 describe("weatherSizeMetrics", () => {
-  it("shrinks icon and temp for mid/narrow spans", () => {
+  it("fills tall cells and keeps mid/narrow spans compact", () => {
     const mid = weatherSizeMetrics(4, 2);
     const large = weatherSizeMetrics(6, 3);
+    const square = weatherSizeMetrics(4, 4);
     const tiny = weatherSizeMetrics(2, 2);
     expect(mid.tempEm).toBeLessThan(large.tempEm);
+    expect(mid.tempEm).toBeLessThan(square.tempEm);
     expect(tiny.iconPx).toBeLessThanOrEqual(mid.iconPx);
-    expect(mid.iconPx).toBeLessThanOrEqual(large.iconPx);
+    expect(mid.iconPx).toBeLessThan(square.iconPx);
     expect(mid.tempEm).toBeGreaterThanOrEqual(0.72);
-    expect(large.tempEm).toBeLessThanOrEqual(1.75);
-    // Mid width must leave room for icon + "34°C" without needing huge type
+    expect(large.tempEm).toBeLessThanOrEqual(1.9);
+    expect(square.tempEm).toBeGreaterThan(1.4);
+    expect(square.tempEm).toBeLessThanOrEqual(3.1);
+    expect(square.iconPx).toBeGreaterThanOrEqual(70);
+    // Mid width must leave room for icon + "36°C" without huge type
     expect(mid.tempEm).toBeLessThanOrEqual(1.35);
     expect(tiny.tempEm).toBeLessThanOrEqual(1.05);
   });
@@ -87,7 +92,11 @@ describe("renderStudioLiquid weather + battery/trash", () => {
     expect(liquid).not.toMatch(/value--xsmall">Battery/);
     expect(liquid).not.toMatch(/creafridge-status/);
     expect(liquid).toMatch(/creafridge-calendar/);
+    expect(liquid).toMatch(/grid-template-columns:\s*auto 1fr/);
     expect(liquid).not.toMatch(/Calendar · 7 days/);
+    expect(liquid).not.toMatch(/grid--cols-4/);
+    expect(liquid).not.toMatch(/col--span-3/);
+    expect(liquid).toMatch(/--cf-cols:/);
   });
 
   it("bakes tall/compact weather classes and metrics from cell spans", () => {
