@@ -383,8 +383,10 @@ function render() {
   renderTitleBar();
 
   const screen = document.getElementById("screen");
-  if (screen && !document.documentElement.classList.contains("has-trmnl-css")) {
-    screen.classList.add("studio-fallback");
+  const hasCss = document.documentElement.classList.contains("has-trmnl-css");
+  if (screen) {
+    if (hasCss) screen.classList.remove("studio-fallback");
+    else screen.classList.add("studio-fallback");
   }
 
   const updated = document.getElementById("updated-label");

@@ -307,15 +307,25 @@ html:not(.has-trmnl-css) .studio-screen.studio-fallback {
   font-family: Georgia, "Times New Roman", serif;
 }
 
-html.no-trmnl-css .studio-screen > .layout,
-html:not(.has-trmnl-css) .studio-fallback > .layout {
+html.no-trmnl-css .studio-screen .view--full,
+html:not(.has-trmnl-css) .studio-fallback .view--full {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+}
+
+html.no-trmnl-css .studio-screen .view--full > .layout,
+html:not(.has-trmnl-css) .studio-fallback .view--full > .layout {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
 }
 
-html.no-trmnl-css .studio-screen > .title_bar,
-html:not(.has-trmnl-css) .studio-fallback > .title_bar {
+html.no-trmnl-css .studio-screen .view--full > .title_bar,
+html:not(.has-trmnl-css) .studio-fallback .view--full > .title_bar {
   flex: 0 0 auto;
   margin-top: auto;
 }

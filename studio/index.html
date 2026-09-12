@@ -61,26 +61,28 @@
             aria-label="Reorder blocks"
           ></aside>
           <div class="preview-frame">
-            <!-- .trmnl wrapper is required for plugins.css CSS variables (--ui-scale, --gap, …) -->
+            <!-- .trmnl + .view--full required for plugins.css vars and column layout -->
             <div class="trmnl">
               <div
                 id="screen"
                 class="screen screen--og screen--color-4bwry studio-screen"
                 data-studio-screen
               >
-                <div
-                  id="screen-body"
-                  class="layout layout--col gap--medium"
-                  aria-label="Screen content"
-                ></div>
-                <div id="title-bar" class="title_bar">
-                  <img
-                    class="image image--adaptive"
-                    alt=""
-                    src="https://trmnl.com/images/plugins/weather--render.svg"
-                  />
-                  <span class="title" id="title-bar-title">CreaFridge</span>
-                  <span class="instance" id="title-bar-instance">My Plugin</span>
+                <div class="view view--full">
+                  <div
+                    id="screen-body"
+                    class="layout layout--col gap--medium"
+                    aria-label="Screen content"
+                  ></div>
+                  <div id="title-bar" class="title_bar">
+                    <img
+                      class="image image--adaptive"
+                      alt=""
+                      src="https://trmnl.com/images/plugins/weather--render.svg"
+                    />
+                    <span class="title" id="title-bar-title">CreaFridge</span>
+                    <span class="instance" id="title-bar-instance">My Plugin</span>
+                  </div>
                 </div>
               </div>
             </div>
