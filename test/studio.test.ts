@@ -140,7 +140,11 @@ describe("studio routes", () => {
     expect(js).toContain("creafridge-battery-cell");
     expect(js).toContain("creafridge-trash-cell");
     expect(js).toContain("creafridge-calendar");
+    expect(js).toContain("creafridge-calendar__list");
     expect(js).toContain("text--red");
+    expect(js).not.toContain("grid--cols-4");
+    expect(js).not.toContain("col--span-3");
+    expect(js).not.toContain("creafridge-calendar__row");
     expect(js).toContain("fixedSizeFor");
     expect(js).toContain('"battery"');
     expect(js).toContain('"trash"');

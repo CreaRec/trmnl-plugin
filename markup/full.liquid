@@ -10,26 +10,49 @@
 {% endcomment %}
 
 <style>
-  .creafridge-weather { min-width: 0; min-height: 0; container-type: size; }
-  .creafridge-weather__body {
+  .creafridge-weather {
     display: flex;
-    flex-direction: row;
-    align-items: center;
+    flex-direction: column;
     min-width: 0;
+    min-height: 0;
+    container-type: size;
+    padding: 4px;
+    gap: 2px;
+    box-sizing: border-box;
+  }
+  .creafridge-weather__title { flex: 0 0 auto; text-align: left; }
+  .creafridge-weather__body {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    justify-items: start;
+    align-content: center;
+    min-width: 0;
+    min-height: 0;
     flex: 1 1 auto;
-    gap: var(--cf-gap, 8px);
+    gap: var(--cf-gap, 6px);
     overflow: hidden;
+    width: 100%;
   }
   .creafridge-weather__icon {
-    width: min(var(--cf-icon, 28px), 28cqmin);
-    height: min(var(--cf-icon, 28px), 28cqmin);
-    max-width: 32%;
+    width: min(var(--cf-icon, 28px), 55cqh);
+    height: min(var(--cf-icon, 28px), 55cqh);
+    max-width: 42%;
     flex-shrink: 0;
     object-fit: contain;
+    justify-self: start;
   }
-  .creafridge-weather__text { min-width: 0; flex: 1 1 auto; overflow: hidden; }
+  .creafridge-weather__text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    overflow: hidden;
+    text-align: left;
+    justify-self: stretch;
+  }
   .creafridge-weather__temp {
-    font-size: min(var(--cf-temp, 1.4em), 22cqw) !important;
+    font-size: min(var(--cf-temp, 1.4em), 42cqw) !important;
     line-height: 1.05 !important;
     min-width: 0;
     max-width: 100%;
@@ -38,9 +61,9 @@
     white-space: nowrap;
   }
   .creafridge-weather img.creafridge-weather__icon {
-    width: min(var(--cf-icon, 28px), 28cqmin) !important;
-    height: min(var(--cf-icon, 28px), 28cqmin) !important;
-    max-width: 32% !important;
+    width: min(var(--cf-icon, 28px), 55cqh) !important;
+    height: min(var(--cf-icon, 28px), 55cqh) !important;
+    max-width: 42% !important;
   }
   .creafridge-weather__meta {
     font-size: var(--cf-meta, 0.85em);
@@ -64,25 +87,56 @@
   .creafridge-battery--low { color: #c0392b; }
   .creafridge-battery--low .creafridge-battery__seg.is-filled { fill: #c0392b; }
   .creafridge-trash { flex-shrink: 0; display: block; color: #c0392b; }
-  .creafridge-calendar { text-align: left; align-items: stretch; min-width: 0; }
-  .creafridge-calendar__list { width: 100%; text-align: left; }
-  .creafridge-calendar__row { align-items: flex-start; width: 100%; text-align: left; }
-  .creafridge-calendar__day { flex: 0 0 auto; min-width: 5.5em; text-align: left; }
-  .creafridge-calendar__events { min-width: 0; text-align: left; }
+  .creafridge-calendar {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+    align-items: stretch;
+    min-width: 0;
+    min-height: 0;
+    padding: 4px;
+    gap: 2px;
+    box-sizing: border-box;
+  }
+  .creafridge-calendar__list {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 8px;
+    row-gap: 3px;
+    align-items: start;
+    justify-items: start;
+    width: 100%;
+    text-align: left;
+  }
+  .creafridge-calendar__day {
+    grid-column: 1;
+    min-width: 0;
+    text-align: left;
+    white-space: nowrap;
+  }
+  .creafridge-calendar__events {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+    text-align: left;
+    justify-self: stretch;
+  }
 </style>
 
 <div class="layout layout--col gap--medium">
   {% comment %} Weather row: two equal outlined halves (Studio: weather_today + weather_tomorrow) {% endcomment %}
   <div class="grid grid--cols-2 gap--small">
-    <div class="col outline rounded--medium p--2 flex flex--col gap--small creafridge-weather creafridge-weather--wide" style="--cf-icon:34px;--cf-temp:1.6em;--cf-gap:8px;--cf-meta:0.85em">
+    <div class="col outline rounded--medium creafridge-weather creafridge-weather--wide" style="--cf-cols:6;--cf-rows:3;--cf-icon:39px;--cf-temp:1.9em;--cf-gap:3px;--cf-meta:0.75em">
       <span class="label creafridge-weather__title">Weather · Today</span>
-      <div class="creafridge-weather__body flex flex--center-y">
+      <div class="creafridge-weather__body">
         <img
           class="image--adaptive creafridge-weather__icon"
           alt="{{ weather.today.condition | default: 'Weather' }}"
           src="{{ weather.today.icon | default: 'https://trmnl.com/images/plugins/weather/wi-na.svg' }}"
         >
-        <div class="creafridge-weather__text flex flex--col gap--xsmall grow">
+        <div class="creafridge-weather__text">
           <span class="value creafridge-weather__temp">
             {% if weather.today.temp_c %}{{ weather.today.temp_c | round }}°C{% else %}—{% endif %}
           </span>
@@ -93,15 +147,15 @@
       </div>
     </div>
 
-    <div class="col outline rounded--medium p--2 flex flex--col gap--small creafridge-weather creafridge-weather--wide" style="--cf-icon:34px;--cf-temp:1.6em;--cf-gap:8px;--cf-meta:0.85em">
+    <div class="col outline rounded--medium creafridge-weather creafridge-weather--wide" style="--cf-cols:6;--cf-rows:3;--cf-icon:39px;--cf-temp:1.9em;--cf-gap:3px;--cf-meta:0.75em">
       <span class="label creafridge-weather__title">Weather · Tomorrow</span>
-      <div class="creafridge-weather__body flex flex--center-y">
+      <div class="creafridge-weather__body">
         <img
           class="image--adaptive creafridge-weather__icon"
           alt="{{ weather.tomorrow.condition | default: 'Tomorrow' }}"
           src="{{ weather.tomorrow.icon | default: 'https://trmnl.com/images/plugins/weather/wi-na.svg' }}"
         >
-        <div class="creafridge-weather__text flex flex--col gap--xsmall grow">
+        <div class="creafridge-weather__text">
           <span class="value creafridge-weather__temp">
             {% if weather.tomorrow.temp_c %}{{ weather.tomorrow.temp_c | round }}°C{% elsif weather.tomorrow.high_c %}{{ weather.tomorrow.high_c | round }}°C{% else %}—{% endif %}
           </span>
@@ -137,33 +191,29 @@
     </div>
   </div>
 
-  {% comment %} Calendar: no header; Today red; labels include dates; left-aligned {% endcomment %}
-  <div class="outline rounded--medium p--2 flex flex--col gap--small creafridge-calendar">
+  {% comment %} Calendar: no header; tight auto+1fr columns; Today red {% endcomment %}
+  <div class="outline rounded--medium creafridge-calendar">
     {% if days and days.size > 0 %}
-      <div class="flex flex--col gap--xsmall creafridge-calendar__list">
+      <div class="creafridge-calendar__list">
         {% for day in days %}
-          <div class="creafridge-calendar__row flex flex--row gap--xsmall">
-            <span class="label creafridge-calendar__day {% if day.is_today %}text--red{% endif %}">{{ day.label }}</span>
-            <div class="creafridge-calendar__events flex flex--col gap--xsmall grow">
-              {% if day.events and day.events.size > 0 %}
-                {% for event in day.events %}
-                  <span class="title title--small">{{ event.time_label }} {{ event.title }}</span>
-                {% endfor %}
-              {% else %}
-                <span class="description">—</span>
-              {% endif %}
-            </div>
+          <span class="label creafridge-calendar__day {% if day.is_today %}text--red{% endif %}">{{ day.label }}</span>
+          <div class="creafridge-calendar__events">
+            {% if day.events and day.events.size > 0 %}
+              {% for event in day.events %}
+                <span class="title title--small">{{ event.time_label }} {{ event.title }}</span>
+              {% endfor %}
+            {% else %}
+              <span class="description">—</span>
+            {% endif %}
           </div>
         {% endfor %}
       </div>
     {% elsif events and events.size > 0 %}
-      <div class="flex flex--col gap--xsmall creafridge-calendar__list">
+      <div class="creafridge-calendar__list">
         {% for event in events %}
-          <div class="creafridge-calendar__row flex flex--row gap--xsmall">
-            <span class="label creafridge-calendar__day">{{ event.day_label }}</span>
-            <div class="creafridge-calendar__events grow">
-              <span class="title title--small">{{ event.time_label }} {{ event.title }}</span>
-            </div>
+          <span class="label creafridge-calendar__day">{{ event.day_label }}</span>
+          <div class="creafridge-calendar__events">
+            <span class="title title--small">{{ event.time_label }} {{ event.title }}</span>
           </div>
         {% endfor %}
       </div>

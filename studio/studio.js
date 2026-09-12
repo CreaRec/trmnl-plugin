@@ -268,34 +268,62 @@ function weatherSizeMetrics(w, h) {
   const ww = Math.max(1, Math.trunc(w));
   const hh = Math.max(1, Math.trunc(h));
   const short = Math.min(ww, hh);
-  const contentW = Math.max(20, ww * 66.7 - 20);
-  const titleReserve = hh <= 2 || ww <= 2 ? 0 : 18;
-  const contentH = Math.max(18, hh * 60 - 16 - titleReserve);
+  const contentW = Math.max(20, ww * 66.7 - 12);
+  const titleReserve = hh <= 2 || ww <= 2 ? 0 : 14;
+  const contentH = Math.max(18, hh * 60 - 8 - titleReserve);
 
   let iconPx = Math.round(10 + short * 5 + Math.min(ww, 5) * 1.25);
-  iconPx = Math.min(iconPx, Math.floor(contentW * 0.28), Math.floor(contentH * 0.55));
+  if (hh >= 3) iconPx += (hh - 2) * 8;
+  const iconWCap = hh >= 3 ? 0.4 : 0.3;
+  const iconHCap = hh >= 3 ? 0.7 : 0.5;
+  iconPx = Math.min(
+    iconPx,
+    Math.floor(contentW * iconWCap),
+    Math.floor(contentH * iconHCap),
+  );
   iconPx = Math.max(12, iconPx);
 
-  const gapPx = Math.round(Math.min(8, Math.max(2, 1 + short)));
+  const gapPx = Math.round(Math.min(10, Math.max(2, short)));
   const remaining = Math.max(14, contentW - iconPx - gapPx);
-  const tempFromWidth = remaining / (4 * 18);
-  const tempFromSpan = 0.62 + (ww - 1) * 0.12 + (hh - 1) * 0.06;
-  const tempEm =
-    Math.round(
-      Math.min(1.75, Math.max(0.72, Math.min(tempFromWidth, tempFromSpan))) * 100,
-    ) / 100;
+  const tempFromWidth = remaining / (4 * 16);
+  const tempFromSpan = 0.55 + (ww - 1) * 0.14 + (hh - 1) * 0.2;
+  const tempFromHeight = contentH / 52;
+  const tempCap =
+    ww <= 2 || (ww <= 3 && hh <= 2)
+      ? 1.05
+      : hh <= 2
+        ? 1.35
+        : hh <= 3
+          ? 1.9
+          : 2.55;
+  const desired = Math.min(
+    tempCap,
+    Math.max(0.72, (tempFromSpan + tempFromHeight) / 2),
+  );
+  const tempEm = Math.round(Math.min(desired, tempFromWidth) * 100) / 100;
   const metaEm =
-    Math.round(Math.min(0.9, Math.max(0.55, 0.5 + short * 0.06)) * 100) / 100;
+    Math.round(
+      Math.min(
+        1.05,
+        Math.max(0.55, 0.5 + short * 0.07 + Math.max(0, hh - 2) * 0.04),
+      ) * 100,
+    ) / 100;
   return { iconPx, tempEm, gapPx, metaEm };
 }
 
 function weatherSizeStyle(w, h) {
   const m = weatherSizeMetrics(w, h);
-  return `--cf-icon:${m.iconPx}px;--cf-temp:${m.tempEm}em;--cf-gap:${m.gapPx}px;--cf-meta:${m.metaEm}em`;
+  const ww = Math.max(1, Math.trunc(w));
+  const hh = Math.max(1, Math.trunc(h));
+  return `--cf-cols:${ww};--cf-rows:${hh};--cf-icon:${m.iconPx}px;--cf-temp:${m.tempEm}em;--cf-gap:${m.gapPx}px;--cf-meta:${m.metaEm}em`;
 }
 
 function applyWeatherSizeVars(card, w, h) {
   const m = weatherSizeMetrics(w, h);
+  const ww = Math.max(1, Math.trunc(w));
+  const hh = Math.max(1, Math.trunc(h));
+  card.style.setProperty("--cf-cols", String(ww));
+  card.style.setProperty("--cf-rows", String(hh));
   card.style.setProperty("--cf-icon", `${m.iconPx}px`);
   card.style.setProperty("--cf-temp", `${m.tempEm}em`);
   card.style.setProperty("--cf-gap", `${m.gapPx}px`);
@@ -332,15 +360,15 @@ function weatherCardHtml(day, label, opts = {}) {
       : "";
 
   return `
-    <div class="outline rounded--medium p--2 flex flex--col gap--small studio-block__card creafridge-weather creafridge-weather--${variant}" style="${sizeStyle}" data-w="${w}" data-h="${h}">
+    <div class="outline rounded--medium studio-block__card creafridge-weather creafridge-weather--${variant}" style="${sizeStyle}" data-w="${w}" data-h="${h}">
       <span class="label creafridge-weather__title">${esc(label)}</span>
-      <div class="creafridge-weather__body flex flex--center-y">
+      <div class="creafridge-weather__body">
         <img
           class="image--adaptive creafridge-weather__icon"
           alt="${esc(condition)}"
           src="${esc(icon)}"
         >
-        <div class="creafridge-weather__text flex flex--col gap--xsmall grow">
+        <div class="creafridge-weather__text">
           <span class="value creafridge-weather__temp">${esc(temp)}</span>
           <span class="label creafridge-weather__meta">${esc(condition)}${esc(range)}</span>
         </div>
@@ -419,24 +447,20 @@ function calendarCardHtml(poll) {
           body = `<span class="description">—</span>`;
         }
         return `
-          <div class="creafridge-calendar__row flex flex--row gap--xsmall">
             <span class="${labelCls}">${esc(day.label || day.key || "")}</span>
-            <div class="creafridge-calendar__events flex flex--col gap--xsmall grow">
+            <div class="creafridge-calendar__events">
               ${body}
-            </div>
-          </div>`;
+            </div>`;
       })
       .join("");
   } else if (events.length > 0) {
     rows = events
       .map(
         (event) => `
-          <div class="creafridge-calendar__row flex flex--row gap--xsmall">
             <span class="label creafridge-calendar__day">${esc(event.day_label || "")}</span>
-            <div class="creafridge-calendar__events grow">
+            <div class="creafridge-calendar__events">
               <span class="title title--small">${esc(event.time_label || "")} ${esc(event.title || "")}</span>
-            </div>
-          </div>`,
+            </div>`,
       )
       .join("");
   } else {
@@ -444,8 +468,8 @@ function calendarCardHtml(poll) {
   }
 
   return `
-    <div class="outline rounded--medium p--2 flex flex--col gap--small studio-block__card creafridge-calendar">
-      <div class="flex flex--col gap--xsmall creafridge-calendar__list">
+    <div class="outline rounded--medium studio-block__card creafridge-calendar">
+      <div class="creafridge-calendar__list">
         ${rows}
       </div>
     </div>`;
