@@ -1,0 +1,15 @@
+node_modules
+dist
+.cache
+.env
+*.log
+.DS_Store
+.git
+test
+coverage
+*.md
+.github
+deploy
+markup
+docs
+examples
