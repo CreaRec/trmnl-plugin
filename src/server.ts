@@ -227,7 +227,9 @@ export async function handleRequest(
     return;
   }
 
-  // Studio-only poll preview (Tailscale/network-gated; no TRMNL_POLL_TOKEN)
+  // Studio-only poll preview (Tailscale/network-gated; no TRMNL_POLL_TOKEN).
+  // Merges preview-only `trmnl` device/plugin vars so Studio can match the
+  // Markup Editor (battery pill + title_bar instance). Never sent on /poll.
   if (path === "/studio/poll") {
     if (method !== "GET" && method !== "HEAD") {
       sendJson(res, 405, { error: "method_not_allowed" });
@@ -240,7 +242,13 @@ export async function handleRequest(
     }
     try {
       const body = await buildPollPayload();
-      sendJson(res, 200, body);
+      sendJson(res, 200, {
+        ...body,
+        trmnl: {
+          device: { percent_charged: 100 },
+          plugin_settings: { instance_name: "My Plugin" },
+        },
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : "unknown_error";
       sendJson(res, 500, { error: "poll_failed", message });

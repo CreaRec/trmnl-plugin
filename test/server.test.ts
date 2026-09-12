@@ -58,7 +58,7 @@ describe("trmnl-plugin HTTP", () => {
     expect(await res.json()).toEqual({ error: "unauthorized" });
   });
 
-  it("GET /studio/poll does not require token and matches authorized poll shape", async () => {
+  it("GET /studio/poll does not require token; adds preview-only trmnl vars", async () => {
     const base = await listen();
     const [studio, authorized] = await Promise.all([
       fetch(`${base}/studio/poll`),
@@ -68,10 +68,19 @@ describe("trmnl-plugin HTTP", () => {
     expect(authorized.status).toBe(200);
     const studioBody = (await studio.json()) as Record<string, unknown>;
     const authBody = (await authorized.json()) as Record<string, unknown>;
-    const { updated_at: _a, ...studioRest } = studioBody;
+    expect(studioBody.title).toBe("CreaFridge");
+    expect(studioBody.trmnl).toEqual({
+      device: { percent_charged: 100 },
+      plugin_settings: { instance_name: "My Plugin" },
+    });
+    expect(authBody).not.toHaveProperty("trmnl");
+    const {
+      updated_at: _a,
+      trmnl: _preview,
+      ...studioRest
+    } = studioBody;
     const { updated_at: _b, ...authRest } = authBody;
     expect(studioRest).toEqual(authRest);
-    expect(studioBody.title).toBe("CreaFridge");
   });
 
   it("GET / with wrong token returns 401", async () => {

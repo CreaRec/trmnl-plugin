@@ -82,7 +82,7 @@ Confirm the exact path under Markup Editor → **Your Variables** / `trmnl` (nam
 - Sparse `text--red` / `text--yellow` for waste and precip; black for body.
 - Full layout (aligned to Studio IA): `grid--cols-2` equal weather halves (condition · low/high, no humidity/cloud row), status outline card with battery/waste pills, calendar outline card listing **all** `days` with `time_label title` or `—`.
 - Do **not** use `bg--gray-*` (or other dark fills) for cards on BWRY: gray dither prints as dense black stipple. Prefer `outline` / `rounded--medium` frames on a light canvas.
-- Liquid (`markup/full.liquid`) is the device source of truth; Studio is a playground for block order preview.
+- Liquid (`markup/full.liquid`) is the device source of truth; Studio mirrors that framework HTML in the 800×480 preview (side-rail DnD; preview-only `trmnl` on `/studio/poll`).
 
 ## Wiring
 

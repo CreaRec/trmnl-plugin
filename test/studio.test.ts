@@ -92,18 +92,51 @@ describe("studio routes", () => {
       expect(body.waste).toBeTypeOf("object");
       expect(Array.isArray(body.events)).toBe(true);
       expect(Array.isArray(body.days)).toBe(true);
+      // Preview-only TRMNL device vars (not on authorized /poll)
+      expect(body.trmnl).toEqual({
+        device: { percent_charged: 100 },
+        plugin_settings: { instance_name: "My Plugin" },
+      });
 
       const authorized = await fetch(
         `${base}/poll/11111111-2222-4333-8444-555555555555`,
       );
       expect(authorized.status).toBe(200);
       const authBody = (await authorized.json()) as Record<string, unknown>;
-      const { updated_at: _a, ...studioRest } = body;
+      expect(authBody).not.toHaveProperty("trmnl");
+      const {
+        updated_at: _a,
+        trmnl: _preview,
+        ...studioRest
+      } = body;
       const { updated_at: _b, ...authRest } = authBody;
       expect(studioRest).toEqual(authRest);
     } finally {
       delete process.env.TRMNL_POLL_TOKEN;
     }
+  });
+
+  it("Studio HTML uses framework screen structure and side rail", async () => {
+    const base = await listen();
+    const html = await (await fetch(`${base}/studio/`)).text();
+    expect(html).toMatch(/id="screen-body"/);
+    expect(html).toMatch(/layout layout--col gap--medium/);
+    expect(html).toMatch(/class="title_bar"/);
+    expect(html).toMatch(/id="block-rail"/);
+    expect(html).toMatch(/studio-rail/);
+    expect(html).not.toMatch(/id="block-list"/);
+
+    const js = await (await fetch(`${base}/studio/studio.js`)).text();
+    expect(js).toContain("grid grid--cols-2 gap--small");
+    expect(js).toContain("value value--xlarge");
+    expect(js).toContain("renderTitleBar");
+    expect(js).toContain("title-bar-instance");
+    expect(js).toContain("Battery");
+    expect(js).not.toContain("No waste today");
+    expect(js).not.toContain("Battery (device var)");
+    expect(js).not.toContain("studio-weather");
+    expect(js).not.toContain("studio-cal-list");
+    expect(js).toContain("studio-rail");
   });
 
   it("GET /studio/layout returns default when file missing", async () => {

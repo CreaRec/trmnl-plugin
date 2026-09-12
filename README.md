@@ -30,7 +30,8 @@ Public poll is tokenized at `https://crearec.app/trmnl/<uuid>` (TRMNL Polling). 
 
 - **localStorage** (`trmnl-studio-layout-v1`) — instant client-side persistence while editing.
 - **Server sync** — `GET`/`PUT`/`POST` `http://100.118.169.52:8799/studio/layout` writes JSON under `STUDIO_LAYOUT_PATH` (compose volume `./data`). Browser localStorage alone is not readable by agents; sync so Senior Pomidor (or any agent) can later `GET` the layout and update Liquid in the repo.
-- **Device source of truth** — `markup/full.liquid` is what TRMNL renders on the fridge. Studio is a layout playground; Full markup is aligned to the default Studio block order (`weather_today` | `weather_tomorrow`, `status`, `calendar`) using TRMNL framework utilities only (no `studio-*` classes).
+- **Device source of truth** — `markup/full.liquid` is what TRMNL renders on the fridge. Studio’s 800×480 screen body mirrors that Liquid with the same framework classes (`layout`, `grid--cols-2`, `outline`, `value--xlarge`, `title_bar`, …). Reorder chrome (↑↓⠿) lives in a **side rail** outside the screen so cards match the Markup Editor preview.
+- **Preview-only device vars** — `GET /studio/poll` merges `trmnl.device.percent_charged: 100` and `trmnl.plugin_settings.instance_name: "My Plugin"` so Studio can show the battery pill and title_bar instance like the Markup Editor. Authorized `/poll` never includes these (TRMNL injects them on device).
 
 Buttons: Save locally · Sync to server · Load from server · Reset default. Drop auto-saves locally; optional debounced auto-sync to the server.
 
@@ -98,7 +99,7 @@ Root fields (see [`examples/sample-payload.json`](examples/sample-payload.json))
 - `events[]` — flat list for the next 7 days
 - `days[]` — group-friendly `{ key, label, is_today, is_tomorrow, events[] }`
 
-**Battery is not a server field.** In Liquid, show a small badge only when TRMNL injects `trmnl.device.percent_charged` (see Markup Editor → Your Variables).
+**Battery is not a server field.** In Liquid, show a small badge only when TRMNL injects `trmnl.device.percent_charged` (see Markup Editor → Your Variables). Studio’s `/studio/poll` adds a **preview-only** `trmnl` object for parity; do not copy that into production poll responses.
 
 ### Waste schedule (America/Chicago)
 
