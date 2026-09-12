@@ -121,5 +121,7 @@ describe("studio-layout v2", () => {
     expect(liquid).toMatch(/CreaFridge Studio/);
     expect(liquid).not.toMatch(/studio-/);
     expect(liquid).toMatch(/title_bar/);
+    expect(liquid).toMatch(/creafridge-weather--wide/);
+    expect(liquid).toMatch(/creafridge-status/);
   });
 });

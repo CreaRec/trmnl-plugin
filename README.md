@@ -2,7 +2,7 @@
 
 Private Plugin markup + live JSON poller for a fridge-mounted **TRMNL BWRY** (black / white / red / yellow) e-ink display.
 
-Dashboard: equal half weather cards (today / tomorrow), optional device battery + Sunday waste pills, and a **full 7-day calendar list** with `—` for empty days (published iCloud ICS).
+Dashboard: weather cards (today / tomorrow) in °C, icon-only device battery + Sunday waste, and a **full 7-day calendar list** with `—` for empty days (published iCloud ICS).
 
 ## Polling URL (TRMNL)
 
@@ -50,12 +50,14 @@ Public poll is tokenized at `https://crearec.app/trmnl/<uuid>` (TRMNL Polling). 
 }
 ```
 
-- Cell units are integers; `x`/`y` are 0-based; `w`/`h` are spans (min `w≥2`, `h≥2` except status may be `h≥1`).
+- Cell units are integers; `x`/`y` are 0-based; `w`/`h` are spans (min `w≥2`, `h≥2` except status may be `1×1`).
+- Weather blocks show **°C** (primary + range) and rearrange by span (`creafridge-weather--wide` / `--tall` / `--compact`).
+- Status is **icon-only** (no header): 4-segment battery from `trmnl.device.percent_charged`, red trash only when `waste.active`.
 - Legacy v1 `{ id, width: "half"|"full" }` is accepted on read and migrated to the default rects above.
 - **localStorage** (`trmnl-studio-layout-v2`) — instant client-side persistence while editing (v1 key is migrated on load).
 - **Server sync** — browser localStorage alone is not readable by agents; sync so Senior Pomidor (or any agent) can `GET` the layout or `/studio/liquid`.
 - **Export flow (device):** Studio → arrange blocks → Sync → **Export Liquid** → paste into TRMNL Markup → **Full** → Force Refresh. Markup Editor / Studio preview may differ from the device; exported Liquid (CSS `grid-template` + `grid-column`/`grid-row`, no `studio-*` classes) is the device source of truth. Repo `markup/full.liquid` remains the default checked-in Full layout.
-- **Preview-only device vars** — `GET /studio/poll` merges `trmnl.device.percent_charged: 100` and `trmnl.plugin_settings.instance_name: "My Plugin"` so Studio can show the battery pill and title_bar instance like the Markup Editor. Authorized `/poll` never includes these (TRMNL injects them on device).
+- **Preview-only device vars** — `GET /studio/poll` merges `trmnl.device.percent_charged: 100` and `trmnl.plugin_settings.instance_name: "My Plugin"` so Studio can show the battery icon and title_bar instance like the Markup Editor. Authorized `/poll` never includes these (TRMNL injects them on device).
 
 Buttons: Save locally · Sync to server · Load from server · Export Liquid · Reset default · Refresh poll. Drag/resize auto-saves locally; optional debounced auto-sync to the server.
 
@@ -89,7 +91,7 @@ Without a valid token, poll endpoints return `401` `{"error":"unauthorized"}`. H
 ├── examples/
 │   └── sample-payload.json
 └── markup/
-    ├── full.liquid               # Full layout (half/half weather, status pills, all 7 days)
+    ├── full.liquid               # Full layout (half/half weather °C, icon status, all 7 days)
     ├── half_horizontal.liquid
     ├── half_vertical.liquid
     ├── quadrant.liquid

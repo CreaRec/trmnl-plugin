@@ -26,7 +26,7 @@ const LABELS = {
 /** @typedef {{ version: number, updated_at: string, grid: { cols: number, rows: number }, blocks: LayoutBlock[] }} StudioLayout */
 
 function minSizeFor(id) {
-  if (id === "status") return { w: 2, h: 1 };
+  if (id === "status") return { w: 1, h: 1 };
   return { w: MIN_W, h: MIN_H };
 }
 
@@ -217,70 +217,100 @@ function esc(s) {
     .replace(/"/g, "&quot;");
 }
 
+/** Mirror src/studio-liquid.ts weatherLayoutVariant thresholds. */
+function weatherLayoutVariant(w, h) {
+  if (w <= 2 || (w <= 3 && h <= 2)) return "compact";
+  if (w > h && w >= 4) return "wide";
+  if (h > w) return "tall";
+  return "balanced";
+}
+
+/** Mirror src/battery.ts — ceil(pct/25) clamped to 1..4; <25% is low/red. */
+function batterySegments(percent) {
+  const pct = Number.isFinite(percent)
+    ? Math.max(0, Math.min(100, percent))
+    : 0;
+  const filled = Math.min(4, Math.max(1, Math.ceil(pct / 25)));
+  return { filled, low: pct < 25, pct: Math.round(pct) };
+}
+
 function weatherCardHtml(day, label, opts = {}) {
   const preferHigh = Boolean(opts.preferHigh);
+  const w = Number(opts.w) || MIN_W;
+  const h = Number(opts.h) || MIN_H;
+  const variant = weatherLayoutVariant(w, h);
   const condition = day?.condition || "—";
   const icon =
     day?.icon || "https://trmnl.com/images/plugins/weather/wi-na.svg";
+
   let temp = "—";
-  if (day?.temp_f != null) temp = `${Math.round(day.temp_f)}°F`;
-  else if (preferHigh && day?.high_f != null)
-    temp = `${Math.round(day.high_f)}°F`;
-  else if (day?.temp_c != null) temp = `${Math.round(day.temp_c)}°C`;
+  if (day?.temp_c != null) temp = `${Math.round(day.temp_c)}°C`;
   else if (preferHigh && day?.high_c != null)
     temp = `${Math.round(day.high_c)}°C`;
 
   const range =
-    day?.low_f != null && day?.high_f != null
-      ? ` · ${Math.round(day.low_f)}° / ${Math.round(day.high_f)}°`
+    day?.low_c != null && day?.high_c != null
+      ? ` · ${Math.round(day.low_c)}° / ${Math.round(day.high_c)}°`
       : "";
 
   return `
-    <div class="outline rounded--medium p--2 flex flex--col gap--small studio-block__card">
-      <span class="label">${esc(label)}</span>
-      <div class="flex flex--row flex--center-y gap--medium">
+    <div class="outline rounded--medium p--2 flex flex--col gap--small studio-block__card creafridge-weather creafridge-weather--${variant}" data-w="${w}" data-h="${h}">
+      <span class="label creafridge-weather__title">${esc(label)}</span>
+      <div class="creafridge-weather__body flex flex--center-y gap--medium">
         <img
-          class="image--adaptive image--small"
+          class="image--adaptive image--small creafridge-weather__icon"
           alt="${esc(condition)}"
           src="${esc(icon)}"
         >
-        <div class="flex flex--col gap--xsmall grow">
-          <span class="value value--xlarge" data-fit-value="true">${esc(temp)}</span>
-          <span class="label">${esc(condition)}${esc(range)}</span>
+        <div class="creafridge-weather__text flex flex--col gap--xsmall grow">
+          <span class="value value--xlarge creafridge-weather__temp" data-fit-value="true">${esc(temp)}</span>
+          <span class="label creafridge-weather__meta">${esc(condition)}${esc(range)}</span>
         </div>
       </div>
     </div>`;
 }
 
+function batteryIconHtml(percent) {
+  const { filled, low, pct } = batterySegments(percent);
+  const segs = [1, 2, 3, 4]
+    .map((i) => {
+      const filledCls = i <= filled ? " is-filled" : "";
+      const x = 2.5 + (i - 1) * 5;
+      return `<rect class="creafridge-battery__seg${filledCls}" x="${x}" y="4.25" width="4" height="5.5" rx="0.5"/>`;
+    })
+    .join("");
+  const lowCls = low ? " creafridge-battery--low" : "";
+  return `<svg class="creafridge-battery${lowCls}" viewBox="0 0 28 14" width="28" height="14" aria-label="Battery ${pct}%" role="img">
+        <rect x="0.5" y="2.5" width="23" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.25"/>
+        <rect x="23.5" y="4.5" width="3" height="5" rx="0.75" fill="currentColor"/>
+        ${segs}
+      </svg>`;
+}
+
+function trashIconHtml(label) {
+  return `<svg class="creafridge-trash text--red" viewBox="0 0 16 16" width="16" height="16" aria-label="${esc(label)}" role="img">
+        <path fill="currentColor" d="M6 1h4l.5 1.5H14v1.5H2V2.5h3.5L6 1zm1 4h1.5v7H7V5zm3 0H11.5v7H10V5zM4.5 5H6v7H4.5V5zM3 13.5h10V15H3v-1.5z"/>
+      </svg>`;
+}
+
 function statusCardHtml(poll) {
   const waste = poll?.waste;
   const battery = poll?.trmnl?.device?.percent_charged;
-  const pills = [];
+  const icons = [];
 
   if (battery != null && battery !== "") {
-    const pct =
-      typeof battery === "number" ? Math.round(battery) : esc(battery);
-    pills.push(`
-      <div class="outline rounded--medium px--2 py--1">
-        <span class="value value--xsmall">Battery ${pct}%</span>
-      </div>`);
+    const pct = typeof battery === "number" ? battery : Number(battery);
+    if (Number.isFinite(pct)) icons.push(batteryIconHtml(pct));
   }
 
   if (waste?.active) {
-    const colorCls =
-      waste.kind === "trash_recycle" ? "text--yellow" : "text--red";
-    const label = waste.label || "Bins out";
-    pills.push(`
-      <div class="outline rounded--medium px--2 py--1">
-        <span class="value value--xsmall ${colorCls}">${esc(label)}</span>
-      </div>`);
+    icons.push(trashIconHtml(waste.label || "Waste"));
   }
 
   return `
-    <div class="outline rounded--medium p--2 flex flex--col gap--small studio-block__card">
-      <span class="label">${esc(LABELS.status)}</span>
-      <div class="flex flex--row gap--small flex--center-y flex--wrap">
-        ${pills.join("")}
+    <div class="outline rounded--medium studio-block__card creafridge-status">
+      <div class="creafridge-status__row flex flex--row flex--center-y gap--small">
+        ${icons.join("")}
       </div>
     </div>`;
 }
@@ -347,10 +377,15 @@ function calendarCardHtml(poll) {
 function blockCardHtml(block, poll) {
   switch (block.id) {
     case "weather_today":
-      return weatherCardHtml(poll?.weather?.today, LABELS.weather_today);
+      return weatherCardHtml(poll?.weather?.today, LABELS.weather_today, {
+        w: block.w,
+        h: block.h,
+      });
     case "weather_tomorrow":
       return weatherCardHtml(poll?.weather?.tomorrow, LABELS.weather_tomorrow, {
         preferHigh: true,
+        w: block.w,
+        h: block.h,
       });
     case "status":
       return statusCardHtml(poll);
@@ -455,7 +490,22 @@ function updateBlockRect(id, nextRect, { commit = false } = {}) {
   const el = document.querySelector(
     `.studio-block[data-block-id="${CSS.escape(id)}"]`,
   );
-  if (el) applyBlockPlacement(el, clamped);
+  if (el) {
+    applyBlockPlacement(el, clamped);
+    const card = el.querySelector(".creafridge-weather");
+    if (card instanceof HTMLElement) {
+      const variant = weatherLayoutVariant(clamped.w, clamped.h);
+      card.classList.remove(
+        "creafridge-weather--compact",
+        "creafridge-weather--wide",
+        "creafridge-weather--tall",
+        "creafridge-weather--balanced",
+      );
+      card.classList.add(`creafridge-weather--${variant}`);
+      card.dataset.w = String(clamped.w);
+      card.dataset.h = String(clamped.h);
+    }
+  }
   return true;
 }
 
