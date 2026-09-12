@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { batteryFilledIndexes, batterySegments } from "../src/battery.js";
-import { weatherLayoutVariant, renderStudioLiquid } from "../src/studio-liquid.js";
+import {
+  weatherLayoutVariant,
+  weatherSizeMetrics,
+  renderStudioLiquid,
+} from "../src/studio-liquid.js";
 import { defaultStudioLayout, minSizeFor } from "../src/studio-layout.js";
 
 describe("batterySegments", () => {
@@ -40,14 +44,28 @@ describe("weatherLayoutVariant", () => {
   });
 });
 
-describe("status min size", () => {
-  it("allows a single cell", () => {
-    expect(minSizeFor("status")).toEqual({ w: 1, h: 1 });
+describe("weatherSizeMetrics", () => {
+  it("shrinks icon and temp for mid/narrow spans", () => {
+    const mid = weatherSizeMetrics(4, 2);
+    const large = weatherSizeMetrics(6, 3);
+    const tiny = weatherSizeMetrics(2, 2);
+    expect(mid.tempEm).toBeLessThan(large.tempEm);
+    expect(tiny.iconPx).toBeLessThanOrEqual(mid.iconPx);
+    expect(mid.iconPx).toBeLessThanOrEqual(large.iconPx);
+    expect(mid.tempEm).toBeGreaterThanOrEqual(0.8);
+    expect(large.tempEm).toBeLessThanOrEqual(2.1);
   });
 });
 
-describe("renderStudioLiquid weather + status", () => {
-  it("exports °C weather with layout classes and icon-only status", () => {
+describe("battery/trash min size", () => {
+  it("locks icon blocks to a single cell", () => {
+    expect(minSizeFor("battery")).toEqual({ w: 1, h: 1 });
+    expect(minSizeFor("trash")).toEqual({ w: 1, h: 1 });
+  });
+});
+
+describe("renderStudioLiquid weather + battery/trash", () => {
+  it("exports °C weather with size vars and separate icon cells", () => {
     const liquid = renderStudioLiquid(defaultStudioLayout());
     expect(liquid).toMatch(/temp_c/);
     expect(liquid).toMatch(/°C/);
@@ -55,25 +73,33 @@ describe("renderStudioLiquid weather + status", () => {
     expect(liquid).not.toMatch(/°F/);
     expect(liquid).toMatch(/creafridge-weather--wide/);
     expect(liquid).toMatch(/data-w="6"/);
+    expect(liquid).toMatch(/--cf-icon:/);
+    expect(liquid).toMatch(/--cf-temp:/);
     expect(liquid).toMatch(/creafridge-battery/);
     expect(liquid).toMatch(/creafridge-battery__seg/);
-    expect(liquid).toMatch(/creafridge-trash/);
+    expect(liquid).toMatch(/creafridge-battery-cell/);
+    expect(liquid).toMatch(/creafridge-trash-cell/);
     expect(liquid).toMatch(/cf_batt_segs/);
     expect(liquid).not.toMatch(/Status · Battery \+ Waste/);
     expect(liquid).not.toMatch(/value--xsmall">Battery/);
+    expect(liquid).not.toMatch(/creafridge-status/);
+    expect(liquid).toMatch(/creafridge-calendar/);
+    expect(liquid).not.toMatch(/Calendar · 7 days/);
   });
 
-  it("bakes tall/compact weather classes from cell spans", () => {
+  it("bakes tall/compact weather classes and metrics from cell spans", () => {
     const layout = defaultStudioLayout();
     layout.blocks = [
       { id: "weather_today", x: 0, y: 0, w: 3, h: 5 },
       { id: "weather_tomorrow", x: 3, y: 0, w: 2, h: 2 },
-      { id: "status", x: 5, y: 0, w: 1, h: 1 },
+      { id: "battery", x: 5, y: 0, w: 1, h: 1 },
+      { id: "trash", x: 6, y: 0, w: 1, h: 1 },
       { id: "calendar", x: 0, y: 5, w: 12, h: 3 },
     ];
     const liquid = renderStudioLiquid(layout);
     expect(liquid).toMatch(/creafridge-weather--tall/);
     expect(liquid).toMatch(/creafridge-weather--compact/);
     expect(liquid).toMatch(/grid-column: 6 \/ span 1/);
+    expect(liquid).toMatch(/--cf-temp:/);
   });
 });

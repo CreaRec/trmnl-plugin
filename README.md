@@ -44,16 +44,18 @@ Public poll is tokenized at `https://crearec.app/trmnl/<uuid>` (TRMNL Polling). 
   "blocks": [
     { "id": "weather_today", "x": 0, "y": 0, "w": 6, "h": 3 },
     { "id": "weather_tomorrow", "x": 6, "y": 0, "w": 6, "h": 3 },
-    { "id": "status", "x": 0, "y": 3, "w": 12, "h": 1 },
+    { "id": "battery", "x": 0, "y": 3, "w": 1, "h": 1 },
+    { "id": "trash", "x": 1, "y": 3, "w": 1, "h": 1 },
     { "id": "calendar", "x": 0, "y": 4, "w": 12, "h": 4 }
   ]
 }
 ```
 
-- Cell units are integers; `x`/`y` are 0-based; `w`/`h` are spans (min `w≥2`, `h≥2` except status may be `1×1`).
-- Weather blocks show **°C** (primary + range) and rearrange by span (`creafridge-weather--wide` / `--tall` / `--compact`).
-- Status is **icon-only** (no header): 4-segment battery from `trmnl.device.percent_charged`, red trash only when `waste.active`.
-- Legacy v1 `{ id, width: "half"|"full" }` is accepted on read and migrated to the default rects above.
+- Cell units are integers; `x`/`y` are 0-based; `w`/`h` are spans (min `w≥2`, `h≥2` except **battery** and **trash** are fixed `1×1`).
+- Weather blocks show **°C** (primary + range), rearrange by span (`creafridge-weather--wide` / `--tall` / `--compact`), and scale icon/temp via `--cf-*` vars from cell `w`/`h`.
+- **Battery** always shows the 4-segment icon (`trmnl.device.percent_charged`). **Trash** shows the red icon only when `waste.active`; otherwise an empty outlined cell.
+- Calendar has **no header**; **Today** uses `text--red`; day labels include dates (e.g. `Today · 9/12`); list is left-aligned.
+- Legacy `status` block (and v1 `{ id, width: "half"|"full" }`) is accepted on read and migrated to `battery` + `trash` at 1×1.
 - **localStorage** (`trmnl-studio-layout-v2`) — instant client-side persistence while editing (v1 key is migrated on load).
 - **Server sync** — browser localStorage alone is not readable by agents; sync so Senior Pomidor (or any agent) can `GET` the layout or `/studio/liquid`.
 - **Export flow (device):** Studio → arrange blocks → Sync → **Export Liquid** → paste into TRMNL Markup → **Full** → Force Refresh. Markup Editor / Studio preview may differ from the device; exported Liquid (CSS `grid-template` + `grid-column`/`grid-row`, no `studio-*` classes) is the device source of truth. Repo `markup/full.liquid` remains the default checked-in Full layout.
@@ -91,7 +93,7 @@ Without a valid token, poll endpoints return `401` `{"error":"unauthorized"}`. H
 ├── examples/
 │   └── sample-payload.json
 └── markup/
-    ├── full.liquid               # Full layout (half/half weather °C, icon status, all 7 days)
+    ├── full.liquid               # Full layout (half/half weather °C, battery+trash, all 7 days)
     ├── half_horizontal.liquid
     ├── half_vertical.liquid
     ├── quadrant.liquid
@@ -146,7 +148,7 @@ Waste is **not** injected into the calendar.
 2. Strategy → **Polling** (recommended).
 3. Save, then **Edit Markup**.
 4. Paste from `markup/` (or Studio export):
-   - `full.liquid` → **Full** (default equal weather halves + status + calendar), **or** paste Liquid from Studio **Export Liquid** / `GET /studio/liquid` for a freeform 12×8 CSS grid
+   - `full.liquid` → **Full** (default equal weather halves + battery/trash + calendar), **or** paste Liquid from Studio **Export Liquid** / `GET /studio/liquid` for a freeform 12×8 CSS grid
    - optional half / quadrant tabs
    - `shared.liquid` → **Shared** (Studio export embeds its own `<style>` in Full; Shared stays light)
 5. Force Refresh; preview as **TRMNL OG (B/W/R/Y)**. Re-paste Full after markup changes or after exporting a new Studio layout — Studio sync alone does not push Liquid to TRMNL.

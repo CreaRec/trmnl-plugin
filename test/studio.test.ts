@@ -132,10 +132,21 @@ describe("studio routes", () => {
     const js = await (await fetch(`${base}/studio/studio.js`)).text();
     expect(js).toContain("GRID_COLS = 12");
     expect(js).toContain("GRID_ROWS = 8");
-    expect(js).toContain("value value--xlarge");
+    expect(js).toContain("creafridge-weather__temp");
+    expect(js).toContain("weatherSizeMetrics");
     expect(js).toContain("renderTitleBar");
     expect(js).toContain("title-bar-instance");
     expect(js).toContain("creafridge-battery");
+    expect(js).toContain("creafridge-battery-cell");
+    expect(js).toContain("creafridge-trash-cell");
+    expect(js).toContain("creafridge-calendar");
+    expect(js).toContain("text--red");
+    expect(js).toContain("fixedSizeFor");
+    expect(js).toContain('"battery"');
+    expect(js).toContain('"trash"');
+    expect(js).toContain("expandLegacyStatusBlocks");
+    expect(js).not.toMatch(/BLOCK_IDS = \[[^\]]*"status"/s);
+    expect(js).not.toContain("Status · Battery + Waste");
     expect(js).toContain("creafridge-weather");
     expect(js).toContain("°C");
     expect(js).not.toContain("°F");
@@ -147,7 +158,9 @@ describe("studio routes", () => {
     expect(js).not.toContain("studio-weather");
     expect(js).not.toContain("studio-cal-list");
     expect(js).not.toContain("studio-rail");
-    expect(js).not.toContain("Status · Battery + Waste</span>");
+    expect(js).not.toContain("Calendar · 7 days");
+    expect(js).not.toContain("text--yellow");
+    expect(js).not.toContain("value--xlarge");
   });
 
   it("GET /studio/layout returns default when file missing", async () => {
@@ -167,7 +180,7 @@ describe("studio routes", () => {
     expect(body.blocks[0]).toMatchObject({ x: 0, y: 0, w: 6, h: 3 });
   });
 
-  it("PUT v1 layout migrates to v2 cell rects on write", async () => {
+  it("PUT v1 layout migrates status to battery+trash on write", async () => {
     const file = await withTempLayoutPath();
     const base = await listen();
     const payload = {
@@ -193,13 +206,18 @@ describe("studio routes", () => {
     expect(saved.version).toBe(2);
     expect(saved.blocks.map((b) => b.id)).toEqual([
       "calendar",
-      "status",
+      "battery",
+      "trash",
       "weather_today",
       "weather_tomorrow",
     ]);
     expect(saved.blocks.find((b) => b.id === "weather_today")).toMatchObject({
       x: 0,
       w: 6,
+    });
+    expect(saved.blocks.find((b) => b.id === "battery")).toMatchObject({
+      w: 1,
+      h: 1,
     });
     expect(saved.updated_at).toBeTypeOf("string");
 
@@ -225,7 +243,8 @@ describe("studio routes", () => {
       blocks: [
         { id: "weather_today", x: 0, y: 0, w: 4, h: 3 },
         { id: "weather_tomorrow", x: 4, y: 0, w: 4, h: 3 },
-        { id: "status", x: 8, y: 0, w: 4, h: 3 },
+        { id: "battery", x: 8, y: 0, w: 1, h: 1 },
+        { id: "trash", x: 9, y: 0, w: 1, h: 1 },
         { id: "calendar", x: 0, y: 3, w: 12, h: 5 },
       ],
     };
@@ -238,9 +257,13 @@ describe("studio routes", () => {
     const saved = (await put.json()) as {
       blocks: { id: string; x: number; w: number }[];
     };
-    expect(saved.blocks.find((b) => b.id === "status")).toMatchObject({
+    expect(saved.blocks.find((b) => b.id === "battery")).toMatchObject({
       x: 8,
-      w: 4,
+      w: 1,
+    });
+    expect(saved.blocks.find((b) => b.id === "trash")).toMatchObject({
+      x: 9,
+      w: 1,
     });
 
     const get = await fetch(`${base}/studio/layout`);
@@ -258,7 +281,7 @@ describe("studio routes", () => {
     expect(onDisk.version).toBe(2);
   });
 
-  it("POST /studio/layout works like PUT", async () => {
+  it("POST /studio/layout migrates legacy status strip", async () => {
     await withTempLayoutPath();
     const base = await listen();
     const res = await fetch(`${base}/studio/layout`, {
@@ -275,8 +298,14 @@ describe("studio routes", () => {
       }),
     });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { blocks: { id: string }[] };
-    expect(body.blocks[0]?.id).toBe("status");
+    const body = (await res.json()) as { blocks: { id: string; w: number }[] };
+    expect(body.blocks.map((b) => b.id)).toContain("battery");
+    expect(body.blocks.map((b) => b.id)).toContain("trash");
+    expect(body.blocks.map((b) => b.id)).not.toContain("status");
+    expect(body.blocks.find((b) => b.id === "battery")).toMatchObject({
+      w: 1,
+      h: 1,
+    });
   });
 
   it("GET /studio/liquid returns paste-ready Full with grid markers", async () => {
@@ -319,7 +348,8 @@ describe("studio routes", () => {
         blocks: [
           { id: "weather_today", x: 0, y: 0, w: 8, h: 3 },
           { id: "weather_tomorrow", x: 4, y: 0, w: 6, h: 3 },
-          { id: "status", x: 0, y: 3, w: 12, h: 1 },
+          { id: "battery", x: 0, y: 3, w: 1, h: 1 },
+          { id: "trash", x: 1, y: 3, w: 1, h: 1 },
           { id: "calendar", x: 0, y: 4, w: 12, h: 4 },
         ],
       }),

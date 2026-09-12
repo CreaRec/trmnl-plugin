@@ -11,30 +11,38 @@ const MIN_H = 2;
 const BLOCK_IDS = [
   "weather_today",
   "weather_tomorrow",
-  "status",
+  "battery",
+  "trash",
   "calendar",
 ];
 
 const LABELS = {
   weather_today: "Weather · Today",
   weather_tomorrow: "Weather · Tomorrow",
-  status: "Status · Battery + Waste",
-  calendar: "Calendar · 7 days",
+  battery: "Battery",
+  trash: "Waste",
+  calendar: "Calendar",
 };
 
 /** @typedef {{ id: string, x: number, y: number, w: number, h: number }} LayoutBlock */
 /** @typedef {{ version: number, updated_at: string, grid: { cols: number, rows: number }, blocks: LayoutBlock[] }} StudioLayout */
 
 function minSizeFor(id) {
-  if (id === "status") return { w: 1, h: 1 };
+  if (id === "battery" || id === "trash") return { w: 1, h: 1 };
   return { w: MIN_W, h: MIN_H };
+}
+
+function fixedSizeFor(id) {
+  if (id === "battery" || id === "trash") return { w: 1, h: 1 };
+  return null;
 }
 
 function defaultBlockRects() {
   return [
     { id: "weather_today", x: 0, y: 0, w: 6, h: 3 },
     { id: "weather_tomorrow", x: 6, y: 0, w: 6, h: 3 },
-    { id: "status", x: 0, y: 3, w: 12, h: 1 },
+    { id: "battery", x: 0, y: 3, w: 1, h: 1 },
+    { id: "trash", x: 1, y: 3, w: 1, h: 1 },
     { id: "calendar", x: 0, y: 4, w: 12, h: 4 },
   ];
 }
@@ -53,9 +61,10 @@ function clampInt(n, min, max) {
 }
 
 function clampRect(raw, id) {
+  const fixed = fixedSizeFor(id);
   const mins = minSizeFor(id);
-  const w = clampInt(raw.w, mins.w, GRID_COLS);
-  const h = clampInt(raw.h, mins.h, GRID_ROWS);
+  const w = clampInt(fixed ? fixed.w : raw.w, mins.w, GRID_COLS);
+  const h = clampInt(fixed ? fixed.h : raw.h, mins.h, GRID_ROWS);
   const x = clampInt(raw.x, 0, Math.max(0, GRID_COLS - w));
   const y = clampInt(raw.y, 0, Math.max(0, GRID_ROWS - h));
   return { x, y, w, h };
@@ -103,6 +112,33 @@ function setStatus(message, tone = "") {
   else delete el.dataset.tone;
 }
 
+function expandLegacyStatusBlocks(blocks) {
+  const hasBattery = blocks.some((b) => b && b.id === "battery");
+  const hasTrash = blocks.some((b) => b && b.id === "trash");
+  const out = [];
+  for (const block of blocks) {
+    if (!block || block.id !== "status") {
+      if (block) out.push(block);
+      continue;
+    }
+    if (hasBattery && hasTrash) continue;
+    const hasCells =
+      block.x != null || block.y != null || block.w != null || block.h != null;
+    if (hasCells && Number.isFinite(Number(block.x)) && Number.isFinite(Number(block.y))) {
+      const bx = clampInt(Number(block.x), 0, GRID_COLS - 1);
+      const by = clampInt(Number(block.y), 0, GRID_ROWS - 1);
+      let tx = bx + 1;
+      if (tx >= GRID_COLS) tx = Math.max(0, bx - 1);
+      if (!hasBattery) out.push({ id: "battery", x: bx, y: by, w: 1, h: 1 });
+      if (!hasTrash) out.push({ id: "trash", x: tx, y: by, w: 1, h: 1 });
+    } else {
+      if (!hasBattery) out.push({ id: "battery", width: block.width });
+      if (!hasTrash) out.push({ id: "trash", width: block.width });
+    }
+  }
+  return out;
+}
+
 function migrateV1Blocks(v1Blocks) {
   const defaults = defaultBlockRects();
   const byId = new Map(defaults.map((b) => [b.id, { ...b }]));
@@ -126,20 +162,22 @@ function normalizeLayout(raw) {
     return base;
   }
 
-  const looksLikeV1 = raw.blocks.every((b) => {
+  const expanded = expandLegacyStatusBlocks(raw.blocks);
+
+  const looksLikeV1 = expanded.every((b) => {
     if (!b || typeof b !== "object") return true;
     return b.x == null && b.y == null && b.w == null && b.h == null;
   });
 
   let blocks;
   if (raw.version <= 1 || looksLikeV1) {
-    blocks = migrateV1Blocks(raw.blocks);
+    blocks = migrateV1Blocks(expanded);
   } else {
     const byId = new Map();
     for (const id of BLOCK_IDS) {
       byId.set(id, { ...defaultBlockRects().find((b) => b.id === id) });
     }
-    for (const b of raw.blocks) {
+    for (const b of expanded) {
       if (b && typeof b.id === "string" && BLOCK_IDS.includes(b.id)) {
         const rect = clampRect(
           {
@@ -225,6 +263,41 @@ function weatherLayoutVariant(w, h) {
   return "balanced";
 }
 
+/** Mirror src/studio-liquid.ts weatherSizeMetrics. */
+function weatherSizeMetrics(w, h) {
+  const ww = Math.max(1, Math.trunc(w));
+  const hh = Math.max(1, Math.trunc(h));
+  const short = Math.min(ww, hh);
+  const contentW = Math.max(24, ww * 66.7 - 16);
+  const iconPx = Math.round(
+    Math.min(40, Math.max(14, 10 + short * 6 + Math.min(ww, 5) * 1.5)),
+  );
+  const gapPx = Math.round(Math.min(10, Math.max(2, 2 + short * 1.25)));
+  const remaining = Math.max(20, contentW - iconPx - gapPx);
+  const tempFromWidth = remaining / (4 * 11);
+  const tempFromSpan = 0.55 + short * 0.2 + Math.min(ww, 6) * 0.06;
+  const tempEm =
+    Math.round(
+      Math.min(2.1, Math.max(0.8, Math.min(tempFromWidth, tempFromSpan))) * 100,
+    ) / 100;
+  const metaEm =
+    Math.round(Math.min(0.95, Math.max(0.6, 0.55 + short * 0.07)) * 100) / 100;
+  return { iconPx, tempEm, gapPx, metaEm };
+}
+
+function weatherSizeStyle(w, h) {
+  const m = weatherSizeMetrics(w, h);
+  return `--cf-icon:${m.iconPx}px;--cf-temp:${m.tempEm}em;--cf-gap:${m.gapPx}px;--cf-meta:${m.metaEm}em`;
+}
+
+function applyWeatherSizeVars(card, w, h) {
+  const m = weatherSizeMetrics(w, h);
+  card.style.setProperty("--cf-icon", `${m.iconPx}px`);
+  card.style.setProperty("--cf-temp", `${m.tempEm}em`);
+  card.style.setProperty("--cf-gap", `${m.gapPx}px`);
+  card.style.setProperty("--cf-meta", `${m.metaEm}em`);
+}
+
 /** Mirror src/battery.ts — ceil(pct/25) clamped to 1..4; <25% is low/red. */
 function batterySegments(percent) {
   const pct = Number.isFinite(percent)
@@ -239,6 +312,7 @@ function weatherCardHtml(day, label, opts = {}) {
   const w = Number(opts.w) || MIN_W;
   const h = Number(opts.h) || MIN_H;
   const variant = weatherLayoutVariant(w, h);
+  const sizeStyle = weatherSizeStyle(w, h);
   const condition = day?.condition || "—";
   const icon =
     day?.icon || "https://trmnl.com/images/plugins/weather/wi-na.svg";
@@ -254,16 +328,16 @@ function weatherCardHtml(day, label, opts = {}) {
       : "";
 
   return `
-    <div class="outline rounded--medium p--2 flex flex--col gap--small studio-block__card creafridge-weather creafridge-weather--${variant}" data-w="${w}" data-h="${h}">
+    <div class="outline rounded--medium p--2 flex flex--col gap--small studio-block__card creafridge-weather creafridge-weather--${variant}" style="${sizeStyle}" data-w="${w}" data-h="${h}">
       <span class="label creafridge-weather__title">${esc(label)}</span>
-      <div class="creafridge-weather__body flex flex--center-y gap--medium">
+      <div class="creafridge-weather__body flex flex--center-y">
         <img
-          class="image--adaptive image--small creafridge-weather__icon"
+          class="image--adaptive creafridge-weather__icon"
           alt="${esc(condition)}"
           src="${esc(icon)}"
         >
         <div class="creafridge-weather__text flex flex--col gap--xsmall grow">
-          <span class="value value--xlarge creafridge-weather__temp" data-fit-value="true">${esc(temp)}</span>
+          <span class="value creafridge-weather__temp" data-fit-value="true">${esc(temp)}</span>
           <span class="label creafridge-weather__meta">${esc(condition)}${esc(range)}</span>
         </div>
       </div>
@@ -293,25 +367,27 @@ function trashIconHtml(label) {
       </svg>`;
 }
 
-function statusCardHtml(poll) {
-  const waste = poll?.waste;
-  const battery = poll?.trmnl?.device?.percent_charged;
-  const icons = [];
-
-  if (battery != null && battery !== "") {
-    const pct = typeof battery === "number" ? battery : Number(battery);
-    if (Number.isFinite(pct)) icons.push(batteryIconHtml(pct));
+function batteryCardHtml(poll) {
+  const raw = poll?.trmnl?.device?.percent_charged;
+  let pct = 0;
+  if (raw != null && raw !== "") {
+    const n = typeof raw === "number" ? raw : Number(raw);
+    if (Number.isFinite(n)) pct = n;
   }
-
-  if (waste?.active) {
-    icons.push(trashIconHtml(waste.label || "Waste"));
-  }
-
   return `
-    <div class="outline rounded--medium studio-block__card creafridge-status">
-      <div class="creafridge-status__row flex flex--row flex--center-y gap--small">
-        ${icons.join("")}
-      </div>
+    <div class="outline rounded--medium studio-block__card creafridge-battery-cell">
+      ${batteryIconHtml(pct)}
+    </div>`;
+}
+
+function trashCardHtml(poll) {
+  const waste = poll?.waste;
+  const icon = waste?.active
+    ? trashIconHtml(waste.label || "Waste")
+    : "";
+  return `
+    <div class="outline rounded--medium studio-block__card creafridge-trash-cell">
+      ${icon}
     </div>`;
 }
 
@@ -324,7 +400,9 @@ function calendarCardHtml(poll) {
     rows = days
       .map((day) => {
         const dayEvents = Array.isArray(day.events) ? day.events : [];
-        const labelCls = day.is_today ? "label text--yellow" : "label";
+        const labelCls = day.is_today
+          ? "label creafridge-calendar__day text--red"
+          : "label creafridge-calendar__day";
         let body;
         if (dayEvents.length > 0) {
           body = dayEvents
@@ -337,11 +415,9 @@ function calendarCardHtml(poll) {
           body = `<span class="description">—</span>`;
         }
         return `
-          <div class="grid grid--cols-4 gap--xsmall">
-            <div class="col">
-              <span class="${labelCls}">${esc(day.label || day.key || "")}</span>
-            </div>
-            <div class="col col--span-3 flex flex--col gap--xsmall">
+          <div class="creafridge-calendar__row flex flex--row gap--xsmall">
+            <span class="${labelCls}">${esc(day.label || day.key || "")}</span>
+            <div class="creafridge-calendar__events flex flex--col gap--xsmall grow">
               ${body}
             </div>
           </div>`;
@@ -351,11 +427,9 @@ function calendarCardHtml(poll) {
     rows = events
       .map(
         (event) => `
-          <div class="grid grid--cols-4 gap--xsmall">
-            <div class="col">
-              <span class="label">${esc(event.day_label || "")}</span>
-            </div>
-            <div class="col col--span-3">
+          <div class="creafridge-calendar__row flex flex--row gap--xsmall">
+            <span class="label creafridge-calendar__day">${esc(event.day_label || "")}</span>
+            <div class="creafridge-calendar__events grow">
               <span class="title title--small">${esc(event.time_label || "")} ${esc(event.title || "")}</span>
             </div>
           </div>`,
@@ -366,9 +440,8 @@ function calendarCardHtml(poll) {
   }
 
   return `
-    <div class="outline rounded--medium p--2 flex flex--col gap--small studio-block__card">
-      <span class="label">${esc(LABELS.calendar)}</span>
-      <div class="flex flex--col gap--xsmall">
+    <div class="outline rounded--medium p--2 flex flex--col gap--small studio-block__card creafridge-calendar">
+      <div class="flex flex--col gap--xsmall creafridge-calendar__list">
         ${rows}
       </div>
     </div>`;
@@ -387,8 +460,10 @@ function blockCardHtml(block, poll) {
         w: block.w,
         h: block.h,
       });
-    case "status":
-      return statusCardHtml(poll);
+    case "battery":
+      return batteryCardHtml(poll);
+    case "trash":
+      return trashCardHtml(poll);
     case "calendar":
       return calendarCardHtml(poll);
     default:
@@ -428,9 +503,14 @@ function render() {
       wrap.dataset.blockId = block.id;
       if (state.selectedId === block.id) wrap.classList.add("is-selected");
       applyBlockPlacement(wrap, block);
+      const resizeLocked = Boolean(fixedSizeFor(block.id));
       wrap.innerHTML = `
         ${blockCardHtml(block, state.poll)}
-        <button type="button" class="studio-block__resize" data-resize="se" aria-label="Resize ${esc(LABELS[block.id] || block.id)}"></button>
+        ${
+          resizeLocked
+            ? ""
+            : `<button type="button" class="studio-block__resize" data-resize="se" aria-label="Resize ${esc(LABELS[block.id] || block.id)}"></button>`
+        }
       `;
       wrap.addEventListener("pointerdown", onBlockPointerDown);
       wrap
@@ -504,6 +584,7 @@ function updateBlockRect(id, nextRect, { commit = false } = {}) {
       card.classList.add(`creafridge-weather--${variant}`);
       card.dataset.w = String(clamped.w);
       card.dataset.h = String(clamped.h);
+      applyWeatherSizeVars(card, clamped.w, clamped.h);
     }
   }
   return true;
@@ -552,6 +633,7 @@ function onResizePointerDown(ev) {
   if (!(wrap instanceof HTMLElement)) return;
   const id = wrap.dataset.blockId;
   if (!id) return;
+  if (fixedSizeFor(id)) return;
   const block = state.layout.blocks.find((b) => b.id === id);
   if (!block) return;
 
