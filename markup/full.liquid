@@ -1,86 +1,111 @@
 {% comment %}
-  Full-screen fridge glanceable for TRMNL BWRY (Private Plugin → Markup → Full).
-  Expects root-level fields from examples/sample-payload.json (polling or webhook).
+  Full-screen fridge dashboard for TRMNL BWRY (Private Plugin → Markup → Full).
+  Payload: examples/sample-payload.json — weather, waste, 7-day calendar list.
+  Battery: TRMNL device var only (trmnl.device.percent_charged) — never invent a server field.
   Platform provides Screen/View; keep layout + title_bar as siblings.
 {% endcomment %}
 
 <div class="layout layout--col gap--medium">
-  <div class="flex flex--row flex--between flex--center-y">
-    <span class="title title--large">{{ title | default: "CreaFridge" }}</span>
+  {% comment %} Header: weather (today + compact tomorrow) + optional battery + Sunday waste {% endcomment %}
+  <div class="flex flex--row flex--between flex--center-y gap--small">
+    <div class="flex flex--col gap--xsmall" style="flex: 1;">
+      <div class="flex flex--row flex--center-y gap--small">
+        <span class="title title--large">
+          {% if weather.today.temp_f %}
+            {{ weather.today.temp_f | round }}°
+          {% elsif weather.today.temp_c %}
+            {{ weather.today.temp_c | round }}°C
+          {% else %}
+            —
+          {% endif %}
+        </span>
+        <span class="description">{{ weather.today.condition | default: "—" }}</span>
+      </div>
+      <span class="label">
+        {% if weather.today.low_f and weather.today.high_f %}
+          {{ weather.today.low_f | round }}° / {{ weather.today.high_f | round }}°
+        {% endif %}
+        {% if weather.today.humidity %}
+          · {{ weather.today.humidity }}%
+        {% endif %}
+      </span>
+      {% if weather.today.precip_slots and weather.today.precip_slots.size > 0 %}
+        <span class="label text--yellow">
+          {% for slot in weather.today.precip_slots limit: 4 %}
+            {{ slot.label }} {{ slot.probability }}{% if slot.mm > 0 %}·{{ slot.mm }}mm{% endif %}{% unless forloop.last %} · {% endunless %}
+          {% endfor %}
+        </span>
+      {% elsif weather.today.precip_summary and weather.today.precip_summary != "No precip" %}
+        <span class="label text--yellow">{{ weather.today.precip_summary }}</span>
+      {% endif %}
+    </div>
+
+    <div class="flex flex--col gap--xsmall" style="text-align: right;">
+      <span class="label">Tomorrow</span>
+      <span class="description">
+        {% if weather.tomorrow.low_f and weather.tomorrow.high_f %}
+          {{ weather.tomorrow.low_f | round }}°/{{ weather.tomorrow.high_f | round }}°
+        {% endif %}
+      </span>
+      <span class="label">{{ weather.tomorrow.condition | default: "—" }}</span>
+      {% if weather.tomorrow.precip_summary and weather.tomorrow.precip_summary != "No precip" %}
+        <span class="label text--yellow">{{ weather.tomorrow.precip_summary | truncate: 28 }}</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="flex flex--row flex--between flex--center-y gap--small">
+    <div class="flex flex--row gap--small flex--center-y">
+      {% if waste.active %}
+        <span class="label {% if waste.kind == 'trash_recycle' %}text--yellow{% else %}text--red{% endif %}">
+          {{ waste.label | default: "Bins out" }}
+        </span>
+      {% endif %}
+      {% comment %} Optional device battery — omit when TRMNL does not inject the var {% endcomment %}
+      {% if trmnl.device.percent_charged %}
+        <span class="label">{{ trmnl.device.percent_charged | round }}%</span>
+      {% endif %}
+    </div>
     <span class="label">
       {% if updated_at %}
         {{ updated_at | date: "%H:%M" }}
-      {% else %}
-        —
       {% endif %}
     </span>
   </div>
 
-  {% comment %} Home status — red when away / alert-ish {% endcomment %}
+  {% comment %} Main: next 7 days as a list (not a week grid). Waste is not calendar. {% endcomment %}
   <div class="flex flex--col gap--small">
-    <span class="label">Home</span>
-    {% assign status = home_status | default: "unknown" | downcase %}
-    {% if status == "away" or status == "empty" %}
-      <span class="value value--large text--red">{{ home_status }}</span>
-    {% elsif status == "home" or status == "occupied" %}
-      <span class="value value--large">{{ home_status }}</span>
-    {% else %}
-      <span class="value value--large text--yellow">{{ home_status }}</span>
-    {% endif %}
-    {% if home_summary %}
-      <span class="description">{{ home_summary }}</span>
-    {% endif %}
-  </div>
-
-  <div class="grid grid--cols-2 gap--medium">
-    {% comment %} Presence block {% endcomment %}
-    <div class="flex flex--col gap--small">
-      <span class="label">Presence</span>
-      {% if presence and presence.size > 0 %}
-        {% for person in presence limit: 4 %}
-          <div class="flex flex--row flex--between flex--center-y">
-            <span class="description">{{ person.name }}</span>
-            {% assign pstate = person.state | default: "" | downcase %}
-            {% if pstate == "home" %}
-              <span class="label">{{ person.state }}</span>
-            {% elsif pstate == "away" %}
-              <span class="label text--red">{{ person.state }}</span>
-            {% else %}
-              <span class="label text--yellow">{{ person.state }}</span>
-            {% endif %}
-          </div>
-        {% endfor %}
-      {% else %}
-        <span class="description">No presence data</span>
-      {% endif %}
-    </div>
-
-    {% comment %} Routine / next-up block {% endcomment %}
-    <div class="flex flex--col gap--small">
-      <span class="label">Routine</span>
-      {% if routines and routines.size > 0 %}
-        {% for item in routines limit: 4 %}
-          <div class="flex flex--col">
-            <span class="description">
-              {% if item.time %}<span class="text--yellow">{{ item.time }}</span> · {% endif %}{{ item.title }}
-            </span>
-          </div>
-        {% endfor %}
-      {% else %}
-        <span class="description">No routines</span>
-      {% endif %}
-    </div>
-  </div>
-
-  {% comment %} Alerts — use red sparingly {% endcomment %}
-  {% if alerts and alerts.size > 0 %}
-    <div class="flex flex--col gap--small">
-      <span class="label text--red">Alerts</span>
-      {% for alert in alerts limit: 3 %}
-        <span class="description text--red">{{ alert }}</span>
+    <span class="label">Next 7 days</span>
+    {% if days and days.size > 0 %}
+      {% for day in days %}
+        <div class="flex flex--col gap--xsmall">
+          <span class="{% if day.is_today %}value{% else %}label{% endif %}{% if day.is_today %} text--yellow{% endif %}">
+            {{ day.label }}
+          </span>
+          {% if day.events and day.events.size > 0 %}
+            {% for event in day.events %}
+              <div class="flex flex--row flex--between flex--center-y gap--small">
+                <span class="description" style="flex: 1;">{{ event.title }}</span>
+                <span class="label {% if event.all_day %}text--yellow{% endif %}">{{ event.time_label }}</span>
+              </div>
+            {% endfor %}
+          {% else %}
+            <span class="description">—</span>
+          {% endif %}
+        </div>
       {% endfor %}
-    </div>
-  {% endif %}
+    {% elsif events and events.size > 0 %}
+      {% for event in events %}
+        <div class="flex flex--row flex--between flex--center-y gap--small">
+          <span class="label">{{ event.day_label }}</span>
+          <span class="description" style="flex: 1;">{{ event.title }}</span>
+          <span class="label">{{ event.time_label }}</span>
+        </div>
+      {% endfor %}
+    {% else %}
+      <span class="description">No upcoming events</span>
+    {% endif %}
+  </div>
 </div>
 
 <div class="title_bar">

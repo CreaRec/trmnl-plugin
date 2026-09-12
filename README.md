@@ -1,8 +1,8 @@
 # trmnl-plugin
 
-Private Plugin markup + a small live JSON poller for a fridge-mounted **TRMNL BWRY** (black / white / red / yellow) e-ink display.
+Private Plugin markup + live JSON poller for a fridge-mounted **TRMNL BWRY** (black / white / red / yellow) e-ink display.
 
-Related home context: Linear [CRE-20](https://linear.app/creadev/issue/CRE-20) / CreaDashboard — presence & routine glanceables on the fridge.
+Dashboard: compact weather + optional device battery + Sunday waste badge, and a **7-day calendar list** (published iCloud ICS).
 
 ## Polling URL (TRMNL)
 
@@ -18,74 +18,103 @@ Use that as the Private Plugin **Polling** URL (`GET`). Each response refreshes 
 https://crearec.app/trmnl/health
 ```
 
-Local / Docker defaults: `HOST=0.0.0.0` `PORT=8799` → `http://127.0.0.1:8799/` and `/health`.
+Local / Docker defaults: `HOST=0.0.0.0` `PORT=8799` → `http://127.0.0.1:8799/` and `/health`. Alias: `GET /poll`.
 
 ## Folder layout
 
 ```text
 .
 ├── README.md
+├── .env.example                  # Placeholder env only (never commit real ICS URL)
 ├── src/                          # Node 22 + TypeScript poll server
 ├── test/
+│   └── fixtures/sample.ics       # Tiny synthetic ICS (no iCloud URL)
 ├── Dockerfile
 ├── docker-compose.yml
 ├── deploy/
-│   ├── docker-compose.yml        # Loopback bind for Debian + nginx
-│   └── nginx-trmnl.conf          # /trmnl → :8799 snippet
+│   ├── docker-compose.yml        # Loopback bind + env_file: .env
+│   └── nginx-trmnl.conf
 ├── docs/
-│   └── trmnl-private-plugin.md   # Polling vs webhook, variable tips
+│   └── trmnl-private-plugin.md
 ├── examples/
-│   └── sample-payload.json       # JSON shape expected by markup/
+│   └── sample-payload.json
 └── markup/
-    ├── full.liquid               # Paste into Markup Editor → Full
-    ├── half_horizontal.liquid    # Mashup half (optional)
+    ├── full.liquid               # Full layout (weather + waste + 7-day list)
+    ├── half_horizontal.liquid
     ├── half_vertical.liquid
     ├── quadrant.liquid
-    └── shared.liquid             # Shared snippets / light styles
+    └── shared.liquid
 ```
+
+## Environment
+
+Copy `.env.example` → `.env` (gitignored). On the Debian host, create `/home/crearec/trmnl-plugin/.env` out-of-band.
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `CALENDAR_ICS_URL` | _(empty)_ | Published iCloud ICS (`https://…`). `webcal://` is rewritten to `https://`. |
+| `WEATHER_LAT` | `30.4394` | Open-Meteo latitude (Pflugerville TX area) |
+| `WEATHER_LON` | `-97.6200` | Open-Meteo longitude |
+| `WEATHER_TZ` | `America/Chicago` | Timezone for weather + calendar window + waste |
+| `PORT` | `8799` | Listen port |
+| `HOST` | `0.0.0.0` | Listen host |
+
+ICS is cached in memory ~10 minutes; weather ~20 minutes.
+
+## JSON payload
+
+Root fields (see [`examples/sample-payload.json`](examples/sample-payload.json)):
+
+- `title`, `plugin_label`, `updated_at`
+- `weather.today` / `weather.tomorrow` — temps (°C/°F), humidity, cloud cover, WMO condition text, low/high, `precip_slots[]`, `precip_summary`
+- `waste` — `{ active, kind: "trash"|"trash_recycle"|null, label, is_sunday }` (`active` only on Sundays)
+- `events[]` — flat list for the next 7 days
+- `days[]` — group-friendly `{ key, label, is_today, is_tomorrow, events[] }`
+
+**Battery is not a server field.** In Liquid, show a small badge only when TRMNL injects `trmnl.device.percent_charged` (see Markup Editor → Your Variables).
+
+### Waste schedule (America/Chicago)
+
+- Every Sunday → `trash` (bins collected Monday; badge all day Sunday)
+- Every 2nd Sunday from anchor **2026-09-13** (14-day step: 13.09, 27.09, 11.10, …) → `trash_recycle`
+
+Waste is **not** injected into the calendar.
 
 ## Prerequisites
 
-- A TRMNL device (BWRY recommended for this scaffold)
-- **Developer Edition** / Developer perks enabled on the account  
-  (Clarity Kit includes Developer Edition; otherwise upgrade once in device settings → Developer perks)
-- No secrets belong in this repo — keep API keys and webhook UUIDs out of git
+- A TRMNL device (BWRY recommended)
+- **Developer Edition** / Developer perks enabled
+- No secrets in git — keep the real ICS URL in host `.env` only
 
 ## Create a Private Plugin in TRMNL
 
-1. In TRMNL, open **Plugins** → search **Private Plugin**.
-2. Give it a name (e.g. `CreaFridge`).
-3. Choose a **Strategy**:
-   - **Polling** (recommended) — TRMNL fetches `https://crearec.app/trmnl` on a schedule.
-   - **Webhook** — you `POST` data to TRMNL when something changes.
-4. Save the plugin (needed before markup / UUID / webhook URL appear).
-5. Click **Edit Markup**.
-6. Paste files from `markup/`:
-   - `full.liquid` → **Full** tab
-   - optionally the half / quadrant files into their tabs
-   - `shared.liquid` → **Shared** tab
-7. Force Refresh, then preview with device profile **TRMNL OG (B/W/R/Y)** (or equivalent BWRY preview).
+1. Plugins → **Private Plugin** → name e.g. `CreaFridge`.
+2. Strategy → **Polling** (recommended).
+3. Save, then **Edit Markup**.
+4. Paste from `markup/`:
+   - `full.liquid` → **Full**
+   - optional half / quadrant tabs
+   - `shared.liquid` → **Shared**
+5. Force Refresh; preview as **TRMNL OG (B/W/R/Y)**.
 
 Official guide: [Private Plugins](https://help.trmnl.com/en/articles/9510536-private-plugins)
 
 ## Set a polling URL
 
-1. Strategy → **Polling**
-2. Polling verb → `GET`
-3. Polling URL → `https://crearec.app/trmnl`
+1. Strategy → **Polling** → verb `GET`
+2. URL → `https://crearec.app/trmnl`
 
-JSON shape matches `examples/sample-payload.json` (`title`, `plugin_label`, `updated_at`, `home_status`, `home_summary`, `presence`, `routines`, `alerts`). Presence / routines / alerts may stay hardcoded for now; only `updated_at` is live.
+**Single URL:** root fields bind as `{{ weather.today.temp_f }}`, `{{ days }}`, …  
+**Multiple URLs:** `{{ IDX_0.… }}`.
 
-**Single URL:** root fields bind as `{{ field_name }}`.  
-**Multiple URLs:** use `{{ IDX_0.field }}`, `{{ IDX_1.field }}`, …
-
-Put merge variables at the **root** of the JSON object (not nested under a lone `data` wrapper), unless you deliberately reference `{{ data.field }}`.
+Keep merge variables at the **root** of the JSON object.
 
 More detail: [docs/trmnl-private-plugin.md](docs/trmnl-private-plugin.md)
 
-## Run the poll server locally
+## Run locally
 
 ```sh
+cp .env.example .env   # edit CALENDAR_ICS_URL if you have one
 npm ci
 npm test
 npm run build
@@ -104,54 +133,31 @@ curl -sS http://127.0.0.1:8799/health
 
 ## Deploy (Debian + nginx)
 
-CI on `main` publishes `ghcr.io/crearec/trmnl-plugin:main` (+ `sha-*`) and SSH-deploys when the same Tailscale / deploy secrets as CreaParks are configured (`TS_OAUTH_*`, `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`).
+CI on `main` publishes `ghcr.io/crearec/trmnl-plugin:main` (+ `sha-*`) and SSH-deploys when Tailscale / deploy secrets are configured.
 
-Manual one-time nginx:
+Manual:
 
 1. Copy `deploy/nginx-trmnl.conf` into `/etc/nginx/snippets/` and `include` it from the crearec.app site.
 2. Place `deploy/docker-compose.yml` at `/home/crearec/trmnl-plugin/docker-compose.yml`.
-3. `docker compose pull && docker compose up -d`
-4. `curl -sS https://crearec.app/trmnl/health`
-
-Public paths:
+3. Ensure `/home/crearec/trmnl-plugin/.env` exists (`env_file: .env` in compose).
+4. `docker compose pull && docker compose up -d`
+5. `curl -sS https://crearec.app/trmnl/health`
 
 | Path | Backend |
 | --- | --- |
-| `/trmnl` | `http://127.0.0.1:8799/` (poll JSON) |
+| `/trmnl` | `http://127.0.0.1:8799/` |
 | `/trmnl/` | 301 → `/trmnl` |
 | `/trmnl/health` | `http://127.0.0.1:8799/health` |
 
 ## BWRY notes
 
-- Framework palette class: **`screen--color-4bwry`** (black, white, red, yellow).
-- On hosted Private Plugins, TRMNL usually wraps your markup in Screen / View for you — paste **layout + title_bar** only (as in `markup/full.liquid`).
-- If you render offline / BYOS / framework playground, wrap with:
+- Palette: **`screen--color-4bwry`**.
+- Hosted Private Plugins wrap Screen/View — paste **layout + title_bar** only.
+- Sparse color: red/yellow for waste and precip attention; black for body.
+- Prefer glanceable lists over dense grids (this design uses a 7-day **list**, not a week grid).
 
-  ```html
-  <div class="screen screen--og screen--color-4bwry">
-    <div class="view view--full">
-      <!-- layout + title_bar from markup/full.liquid -->
-    </div>
-  </div>
-  ```
-
-- Prefer sparse color: red for alerts / away, yellow for attention / upcoming, black text for body.
-- BWRY refreshes are slower than grayscale OG — favor glanceable blocks over dense tables; longer refresh intervals are fine for a fridge mount.
-- In the Markup Editor / Framework Device Preview, switch to **B/W/R/Y** (or **TRMNL OG (B/W/R/Y)**) before judging color.
-
-Framework references:
-
-- [Color palettes](https://trmnl.com/framework/docs/3.3/color_palettes)
-- [Structure](https://trmnl.com/framework/docs/3.3/structure)
-- [Liquid 101](https://help.trmnl.com/en/articles/10671186-liquid-101)
-
-## Local markup workflow
-
-1. Edit Liquid under `markup/`.
-2. Keep `examples/sample-payload.json` (and `src/payload.ts`) in sync with any new `{{ variables }}`.
-3. Copy into the TRMNL Markup Editor and Force Refresh.
-4. Point Polling at `https://crearec.app/trmnl` (or local `:8799`).
+Framework: [Color palettes](https://trmnl.com/framework/docs/3.3/color_palettes) · [Structure](https://trmnl.com/framework/docs/3.3/structure) · [Liquid 101](https://help.trmnl.com/en/articles/10671186-liquid-101)
 
 ## License / ownership
 
-CreaRec / Nikita — private home plugin scaffold. Talk and code comments may be English; keep the README practical for setup.
+CreaRec / Nikita — private home plugin. Talk and code comments may be English; keep the README practical for setup.

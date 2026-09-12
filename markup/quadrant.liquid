@@ -1,12 +1,15 @@
-{% comment %} Mashup: quadrant — single status chip {% endcomment %}
+{% comment %} Mashup: quadrant — temp + waste chip {% endcomment %}
 
 <div class="layout layout--col layout--center gap--small">
-  <span class="label">{{ title | default: "Home" }}</span>
-  <span class="value {% if home_status == 'away' or home_status == 'empty' %}text--red{% elsif home_status != 'home' %}text--yellow{% endif %}">
-    {{ home_status | default: "—" }}
+  <span class="value">
+    {% if weather.today.temp_f %}{{ weather.today.temp_f | round }}°{% else %}—{% endif %}
   </span>
+  <span class="label">{{ weather.today.condition | default: "" }}</span>
+  {% if waste.active %}
+    <span class="label text--red">{{ waste.label }}</span>
+  {% endif %}
 </div>
 
 <div class="title_bar">
-  <span class="title">{{ plugin_label | default: "Status" }}</span>
+  <span class="title">{{ plugin_label | default: "Weather" }}</span>
 </div>

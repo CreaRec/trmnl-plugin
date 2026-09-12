@@ -1,13 +1,21 @@
-{% comment %} Mashup: half vertical — presence list {% endcomment %}
+{% comment %} Mashup: half vertical — compact 7-day event list {% endcomment %}
 
 <div class="layout layout--col gap--small">
-  <span class="label">Presence</span>
-  {% if presence and presence.size > 0 %}
-    {% for person in presence limit: 5 %}
-      <div class="flex flex--row flex--between">
-        <span class="description">{{ person.name }}</span>
-        <span class="label {% if person.state == 'away' %}text--red{% endif %}">{{ person.state }}</span>
-      </div>
+  <span class="label">Calendar</span>
+  {% if days and days.size > 0 %}
+    {% for day in days limit: 5 %}
+      {% if day.events.size > 0 %}
+        <div class="flex flex--col">
+          <span class="label {% if day.is_today %}text--yellow{% endif %}">{{ day.label }}</span>
+          {% for event in day.events limit: 2 %}
+            <span class="description">{{ event.time_label }} {{ event.title }}</span>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endfor %}
+  {% elsif events and events.size > 0 %}
+    {% for event in events limit: 6 %}
+      <span class="description">{{ event.day_label }} · {{ event.title }}</span>
     {% endfor %}
   {% else %}
     <span class="description">—</span>
@@ -15,5 +23,5 @@
 </div>
 
 <div class="title_bar">
-  <span class="title">{{ plugin_label | default: "Presence" }}</span>
+  <span class="title">{{ plugin_label | default: "Calendar" }}</span>
 </div>
