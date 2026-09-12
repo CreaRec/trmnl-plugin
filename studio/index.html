@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CreaFridge Studio</title>
+    <link rel="stylesheet" href="./studio.css" />
+    <script>
+      /* Probe TRMNL framework CSS; keep preview usable if CDN fails. */
+      (function () {
+        var link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.href = "https://trmnl.com/css/latest/plugins.css";
+        link.onload = function () {
+          document.documentElement.classList.add("has-trmnl-css");
+        };
+        link.onerror = function () {
+          document.documentElement.classList.add("no-trmnl-css");
+        };
+        document.head.appendChild(link);
+        var js = document.createElement("script");
+        js.src = "https://trmnl.com/js/latest/plugins.js";
+        js.async = true;
+        js.onerror = function () {
+          /* optional */
+        };
+        document.head.appendChild(js);
+      })();
+    </script>
+  </head>
+  <body>
+    <header class="studio-chrome">
+      <div class="studio-brand">
+        <span class="studio-brand__name">CreaFridge</span>
+        <span class="studio-brand__sub">Studio</span>
+      </div>
+      <p class="studio-lede">
+        Drag blocks to preview the fridge dashboard (~800×480). Order saves in
+        localStorage and can sync to the server for Liquid updates.
+      </p>
+      <div class="studio-actions" role="toolbar" aria-label="Layout actions">
+        <button type="button" id="btn-save-local">Save locally</button>
+        <button type="button" id="btn-sync-server" class="primary">
+          Sync to server
+        </button>
+        <button type="button" id="btn-load-server">Load from server</button>
+        <button type="button" id="btn-reset">Reset default</button>
+        <button type="button" id="btn-refresh-poll">Refresh poll</button>
+      </div>
+      <p id="studio-status" class="studio-status" aria-live="polite"></p>
+    </header>
+
+    <main class="studio-main">
+      <section class="preview-wrap" aria-label="TRMNL OG preview">
+        <div class="preview-frame">
+          <div
+            id="screen"
+            class="screen screen--color-4bwry studio-screen"
+            data-studio-screen
+          >
+            <div class="title_bar">
+              <span class="title">CreaFridge</span>
+              <span class="instance" id="updated-label">—</span>
+            </div>
+            <div
+              id="block-list"
+              class="layout layout--col gap--medium studio-blocks"
+              aria-label="Draggable blocks"
+            ></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="./studio.js" type="module"></script>
+  </body>
+</html>

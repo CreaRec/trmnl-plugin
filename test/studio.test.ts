@@ -1,0 +1,177 @@
+import { afterEach, describe, expect, it } from "vitest";
+import type { AddressInfo } from "node:net";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { createServer } from "../src/server.js";
+import { defaultStudioLayout } from "../src/studio-layout.js";
+
+const servers: ReturnType<typeof createServer>[] = [];
+const prevLayoutPath = process.env.STUDIO_LAYOUT_PATH;
+
+afterEach(async () => {
+  await Promise.all(
+    servers.splice(0).map(
+      (server) =>
+        new Promise<void>((resolve, reject) => {
+          server.close((err) => (err ? reject(err) : resolve()));
+        }),
+    ),
+  );
+  if (prevLayoutPath === undefined) {
+    delete process.env.STUDIO_LAYOUT_PATH;
+  } else {
+    process.env.STUDIO_LAYOUT_PATH = prevLayoutPath;
+  }
+});
+
+async function listen(): Promise<string> {
+  const server = createServer();
+  servers.push(server);
+  await new Promise<void>((resolve) => {
+    server.listen(0, "127.0.0.1", () => resolve());
+  });
+  const { port } = server.address() as AddressInfo;
+  return `http://127.0.0.1:${port}`;
+}
+
+async function withTempLayoutPath(): Promise<string> {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "trmnl-studio-"));
+  const file = path.join(dir, "studio-layout.json");
+  process.env.STUDIO_LAYOUT_PATH = file;
+  return file;
+}
+
+describe("studio routes", () => {
+  it("GET /studio redirects to /studio/", async () => {
+    const base = await listen();
+    const res = await fetch(`${base}/studio`, { redirect: "manual" });
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toBe("/studio/");
+  });
+
+  it("GET /studio/ returns HTML 200", async () => {
+    const base = await listen();
+    const res = await fetch(`${base}/studio/`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toMatch(/text\/html/);
+    const html = await res.text();
+    expect(html).toMatch(/CreaFridge/);
+    expect(html).toMatch(/Studio/);
+  });
+
+  it("GET /studio/studio.js and studio.css are served", async () => {
+    const base = await listen();
+    const js = await fetch(`${base}/studio/studio.js`);
+    const css = await fetch(`${base}/studio/studio.css`);
+    expect(js.status).toBe(200);
+    expect(js.headers.get("content-type")).toMatch(/javascript/);
+    expect(css.status).toBe(200);
+    expect(css.headers.get("content-type")).toMatch(/css/);
+  });
+
+  it("GET /studio/layout returns default when file missing", async () => {
+    await withTempLayoutPath();
+    const base = await listen();
+    const res = await fetch(`${base}/studio/layout`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      version: number;
+      blocks: { id: string }[];
+    };
+    const def = defaultStudioLayout();
+    expect(body.version).toBe(def.version);
+    expect(body.blocks.map((b) => b.id)).toEqual(def.blocks.map((b) => b.id));
+  });
+
+  it("PUT /studio/layout then GET roundtrips", async () => {
+    const file = await withTempLayoutPath();
+    const base = await listen();
+    const payload = {
+      version: 1,
+      blocks: [
+        { id: "calendar", width: "full" },
+        { id: "status", width: "full" },
+        { id: "weather_today", width: "half" },
+        { id: "weather_tomorrow", width: "half" },
+      ],
+    };
+    const put = await fetch(`${base}/studio/layout`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    expect(put.status).toBe(200);
+    const saved = (await put.json()) as {
+      updated_at: string;
+      blocks: { id: string }[];
+    };
+    expect(saved.blocks.map((b) => b.id)).toEqual([
+      "calendar",
+      "status",
+      "weather_today",
+      "weather_tomorrow",
+    ]);
+    expect(saved.updated_at).toBeTypeOf("string");
+
+    const get = await fetch(`${base}/studio/layout`);
+    expect(get.status).toBe(200);
+    const again = (await get.json()) as { blocks: { id: string }[] };
+    expect(again.blocks.map((b) => b.id)).toEqual(saved.blocks.map((b) => b.id));
+
+    const onDisk = JSON.parse(await fs.readFile(file, "utf8")) as {
+      blocks: { id: string }[];
+    };
+    expect(onDisk.blocks.map((b) => b.id)).toEqual(saved.blocks.map((b) => b.id));
+  });
+
+  it("POST /studio/layout works like PUT", async () => {
+    await withTempLayoutPath();
+    const base = await listen();
+    const res = await fetch(`${base}/studio/layout`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        version: 1,
+        blocks: [
+          { id: "status", width: "full" },
+          { id: "calendar", width: "full" },
+          { id: "weather_today", width: "half" },
+          { id: "weather_tomorrow", width: "half" },
+        ],
+      }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { blocks: { id: string }[] };
+    expect(body.blocks[0]?.id).toBe("status");
+  });
+
+  it("rejects invalid layout body", async () => {
+    await withTempLayoutPath();
+    const base = await listen();
+    const res = await fetch(`${base}/studio/layout`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ version: 1, blocks: [{ id: "nope" }] }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("OPTIONS allows PUT/POST for studio layout", async () => {
+    const base = await listen();
+    const res = await fetch(`${base}/studio/layout`, { method: "OPTIONS" });
+    expect(res.status).toBe(204);
+    expect(res.headers.get("access-control-allow-origin")).toBe("*");
+    const methods = res.headers.get("access-control-allow-methods") ?? "";
+    expect(methods).toMatch(/PUT/);
+    expect(methods).toMatch(/POST/);
+    expect(methods).toMatch(/GET/);
+  });
+
+  it("does not break GET /health", async () => {
+    const base = await listen();
+    const res = await fetch(`${base}/health`);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ status: "ok" });
+  });
+});

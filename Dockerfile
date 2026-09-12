@@ -22,10 +22,14 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PORT=8799
-RUN apk add --no-cache wget curl
+ENV STUDIO_LAYOUT_PATH=/app/data/studio-layout.json
+RUN apk add --no-cache wget curl \
+  && mkdir -p /app/data \
+  && chown node:node /app/data
 COPY package.json ./
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
+COPY studio/ ./studio/
 USER node
 EXPOSE 8799
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \

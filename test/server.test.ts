@@ -92,6 +92,8 @@ describe("trmnl-plugin HTTP", () => {
     expect(res.status).toBe(204);
     expect(res.headers.get("access-control-allow-origin")).toBe("*");
     expect(res.headers.get("access-control-allow-methods")).toMatch(/GET/);
+    expect(res.headers.get("access-control-allow-methods")).toMatch(/PUT/);
+    expect(res.headers.get("access-control-allow-methods")).toMatch(/POST/);
   });
 
   it("refreshes updated_at between requests", async () => {
