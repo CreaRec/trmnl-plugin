@@ -10,6 +10,8 @@
   --focus: #3d6b4f;
   --screen-w: 800px;
   --screen-h: 480px;
+  --grid-cols: 12;
+  --grid-rows: 8;
   --font-ui: "IBM Plex Sans", "Segoe UI", sans-serif;
   --font-display: "IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
 }
@@ -74,17 +76,15 @@ body {
 
 .studio-lede {
   margin: 0 0 1rem;
-  max-width: 42rem;
+  max-width: 46rem;
   color: var(--muted);
   font-size: 0.95rem;
   line-height: 1.45;
 }
 
-.studio-lede code {
-  font-size: 0.85em;
-  background: rgba(0, 0, 0, 0.06);
-  padding: 0.1em 0.35em;
-  border-radius: 2px;
+.studio-lede strong {
+  color: var(--ink);
+  font-weight: 700;
 }
 
 .studio-actions {
@@ -157,24 +157,17 @@ body {
 }
 
 .preview-wrap {
-  width: min(100%, calc(var(--screen-w) + 11rem));
-}
-
-.preview-stage {
-  display: flex;
-  align-items: stretch;
-  gap: 0.65rem;
-  animation: frame-in 0.45s ease-out both;
+  width: min(100%, calc(var(--screen-w) + 2rem));
 }
 
 .preview-frame {
-  flex: 0 1 auto;
   background: #111;
   padding: 0.75rem;
   border-radius: 4px;
   box-shadow:
     0 12px 40px rgba(0, 0, 0, 0.28),
     inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  animation: frame-in 0.45s ease-out both;
 }
 
 @keyframes frame-in {
@@ -188,105 +181,101 @@ body {
   }
 }
 
-/* Side rail: DnD / reorder chrome outside the 800×480 screen */
-.studio-rail {
-  flex: 0 0 9.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 0.35rem 0;
-  min-width: 0;
-}
-
-.studio-rail__item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 6px 8px;
-  background: var(--chrome);
-  border: 1.5px solid var(--line);
-  border-radius: 3px;
-  cursor: grab;
-  user-select: none;
-  transition: box-shadow 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
-}
-
-.studio-rail__item:active {
-  cursor: grabbing;
-}
-
-.studio-rail__item.is-dragging {
-  opacity: 0.45;
-}
-
-.studio-rail__item.is-drag-over {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(181, 74, 42, 0.35);
-}
-
-.studio-rail__label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  line-height: 1.25;
-  color: var(--ink);
-}
-
-.studio-rail__controls {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.studio-rail__controls button {
-  appearance: none;
-  border: 1px solid var(--line);
-  background: #fff;
-  font: inherit;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1;
-  padding: 2px 6px;
-  cursor: pointer;
-  border-radius: 2px;
-}
-
-.studio-rail__controls button:hover {
-  background: #f5f0e6;
-}
-
-.studio-rail__controls button:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
-
-.studio-rail__handle {
-  font-size: 12px;
-  opacity: 0.45;
-  letter-spacing: 0.15em;
-  pointer-events: none;
-  margin-left: auto;
-}
-
 /* Exact OG screen — prefer TRMNL .trmnl .screen vars; thin studio overrides only */
 .preview-frame .trmnl {
-  /* Contain framework transform/margin quirks from plugins.css */
   overflow: hidden;
   width: var(--screen-w, 800px);
   max-width: 100%;
 }
 
 .studio-screen {
-  /* Framework sets size via .trmnl .screen--og; keep a max for small viewports */
   max-width: 100%;
   position: relative;
   box-sizing: border-box;
 }
 
-/* When framework CSS loaded, do not fight its layout/title_bar sizing */
 html.has-trmnl-css .studio-screen {
-  /* plugins.css already pads .trmnl .screen */
   overflow: hidden;
+}
+
+/* Freeform 12×8 content grid (title_bar remains sibling below) */
+.creafridge-studio-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--grid-cols), 1fr);
+  grid-template-rows: repeat(var(--grid-rows), 1fr);
+  gap: 4px;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  /* Subtle cell guides */
+  background-color: transparent;
+  background-image:
+    linear-gradient(to right, rgba(0, 0, 0, 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.07) 1px, transparent 1px);
+  background-size:
+    calc(100% / var(--grid-cols)) 100%,
+    100% calc(100% / var(--grid-rows));
+  background-position: 0 0;
+}
+
+.studio-block {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  z-index: 1;
+}
+
+.studio-block:active,
+.studio-block.is-dragging {
+  cursor: grabbing;
+}
+
+.studio-block.is-dragging,
+.studio-block.is-resizing {
+  z-index: 3;
+  opacity: 0.92;
+}
+
+.studio-block.is-selected {
+  z-index: 2;
+  box-shadow: 0 0 0 2px rgba(61, 107, 79, 0.55);
+}
+
+.studio-block__card {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.studio-block__resize {
+  appearance: none;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 0 0 4px 0;
+  background:
+    linear-gradient(135deg, transparent 45%, rgba(0, 0, 0, 0.55) 45%, rgba(0, 0, 0, 0.55) 55%, transparent 55%),
+    linear-gradient(135deg, transparent 65%, rgba(0, 0, 0, 0.4) 65%, rgba(0, 0, 0, 0.4) 75%, transparent 75%);
+  cursor: nwse-resize;
+  z-index: 4;
+  pointer-events: auto;
+}
+
+.studio-block__resize:hover,
+.studio-block.is-selected .studio-block__resize {
+  background-color: rgba(201, 162, 39, 0.35);
 }
 
 /* Fallback path when CDN failed — approximate Liquid look */
@@ -317,11 +306,10 @@ html:not(.has-trmnl-css) .studio-fallback .view--full {
   height: 100%;
 }
 
-html.no-trmnl-css .studio-screen .view--full > .layout,
-html:not(.has-trmnl-css) .studio-fallback .view--full > .layout {
+html.no-trmnl-css .studio-screen .view--full > .creafridge-studio-grid,
+html:not(.has-trmnl-css) .studio-fallback .view--full > .creafridge-studio-grid {
   flex: 1 1 auto;
   min-height: 0;
-  overflow: auto;
 }
 
 html.no-trmnl-css .studio-screen .view--full > .title_bar,
@@ -356,13 +344,6 @@ html:not(.has-trmnl-css) .studio-fallback .value--xsmall {
   font-weight: 700;
 }
 
-html.no-trmnl-css .studio-screen .grid--cols-2,
-html:not(.has-trmnl-css) .studio-fallback .grid--cols-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
 html.no-trmnl-css .studio-screen .grid--cols-4,
 html:not(.has-trmnl-css) .studio-fallback .grid--cols-4 {
   display: grid;
@@ -373,13 +354,6 @@ html:not(.has-trmnl-css) .studio-fallback .grid--cols-4 {
 html.no-trmnl-css .studio-screen .col--span-3,
 html:not(.has-trmnl-css) .studio-fallback .col--span-3 {
   grid-column: span 3;
-}
-
-html.no-trmnl-css .studio-screen .layout--col,
-html:not(.has-trmnl-css) .studio-fallback .layout--col {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
 }
 
 html.no-trmnl-css .studio-screen .flex--row,
@@ -479,22 +453,7 @@ html:not(.has-trmnl-css) .studio-fallback .title_bar .instance {
   opacity: 0.9;
 }
 
-@media (max-width: 960px) {
-  .preview-stage {
-    flex-direction: column;
-  }
-
-  .studio-rail {
-    flex: 0 0 auto;
-    flex-direction: row;
-    flex-wrap: wrap;
-    width: 100%;
-  }
-
-  .studio-rail__item {
-    flex: 1 1 10rem;
-  }
-
+@media (max-width: 860px) {
   .preview-frame .trmnl {
     width: 100%;
   }
@@ -507,8 +466,7 @@ html:not(.has-trmnl-css) .studio-fallback .title_bar .instance {
     overflow: auto;
   }
 
-  html.no-trmnl-css .studio-screen .grid--cols-2,
-  html:not(.has-trmnl-css) .studio-fallback .grid--cols-2 {
-    grid-template-columns: 1fr;
+  .creafridge-studio-grid {
+    min-height: 360px;
   }
 }
