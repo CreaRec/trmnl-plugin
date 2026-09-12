@@ -79,8 +79,9 @@ Confirm the exact path under Markup Editor → **Your Variables** / `trmnl` (nam
 
 - Device palette: `screen--color-4bwry`.
 - Paste layout + `title_bar` only on hosted plugins.
-- Sparse `text--red` / `text--yellow` for waste and precip; black/gray for body.
-- Full layout: card blocks — today/tomorrow weather with adaptive icons, status strip (battery + waste), calendar day rows (skip empty days after tomorrow).
+- Sparse `text--red` / `text--yellow` for waste and precip; black for body.
+- Full layout: outlined card frames — today/tomorrow weather with adaptive icons, status strip (battery + waste), calendar day rows (skip empty days after tomorrow).
+- Do **not** use `bg--gray-*` (or other dark fills) for cards on BWRY: gray dither prints as dense black stipple. Prefer `outline` / `rounded--medium` frames on a light canvas.
 
 ## Wiring
 

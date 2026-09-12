@@ -1,61 +1,41 @@
-{% comment %} Mashup: half horizontal — weather card + waste + next event {% endcomment %}
+{% comment %} Mashup: half horizontal — weather frame + waste + next event {% endcomment %}
 
 <div class="layout layout--col gap--small">
-  <div class="bg--gray-10 rounded--medium p--2">
+  <div class="outline rounded--medium p--2">
     <div class="flex flex--row flex--center-y gap--small">
       <img
         class="image--adaptive image--xsmall"
         alt="{{ weather.today.condition | default: 'Weather' }}"
         src="{{ weather.today.icon | default: 'https://trmnl.com/images/plugins/weather/wi-na.svg' }}"
       >
-      <div class="item grow">
-        <div class="meta"></div>
-        <div class="content">
-          <span class="value value--large">
-            {% if weather.today.temp_f %}{{ weather.today.temp_f | round }}°F{% else %}—{% endif %}
-            {% if weather.today.temp_c %}<span class="label"> / {{ weather.today.temp_c | round }}°C</span>{% endif %}
-          </span>
-          <span class="label">{{ weather.today.condition | default: "" }}</span>
-        </div>
+      <div class="flex flex--col grow">
+        <span class="value value--large">
+          {% if weather.today.temp_f %}{{ weather.today.temp_f | round }}°F{% else %}—{% endif %}
+          {% if weather.today.temp_c %}<span class="label"> / {{ weather.today.temp_c | round }}°C</span>{% endif %}
+        </span>
+        <span class="label">{{ weather.today.condition | default: "" }}</span>
       </div>
     </div>
   </div>
   {% if waste.active %}
-    <div class="item item--emphasis-2">
-      <div class="meta"></div>
-      <div class="icon">
-        {% if waste.kind == "trash_recycle" %}
-          <img class="image--adaptive image--xsmall" alt="" src="https://trmnl.com/images/plugins/weather/wi-refresh.svg">
-        {% else %}
-          <img class="image--adaptive image--xsmall" alt="" src="https://trmnl.com/images/plugins/weather/wi-dust.svg">
-        {% endif %}
-      </div>
-      <div class="content">
-        <span class="value value--xsmall text--red">{{ waste.label }}</span>
-      </div>
+    <div class="flex flex--row flex--center-y gap--xsmall">
+      {% if waste.kind == "trash_recycle" %}
+        <img class="image--adaptive image--xsmall" alt="" src="https://trmnl.com/images/plugins/weather/wi-refresh.svg">
+      {% else %}
+        <img class="image--adaptive image--xsmall" alt="" src="https://trmnl.com/images/plugins/weather/wi-dust.svg">
+      {% endif %}
+      <span class="value value--xsmall text--red">{{ waste.label }}</span>
     </div>
   {% endif %}
   {% if days and days.size > 0 and days[0].events.size > 0 %}
-    <div class="item">
-      <div class="meta"></div>
-      <div class="icon">
-        <img class="image--adaptive image--xsmall" alt="" src="https://trmnl.com/images/plugins/weather/wi-time-3.svg">
-      </div>
-      <div class="content">
-        <span class="title title--small">{{ days[0].events[0].title }}</span>
-        <span class="label text--yellow">{{ days[0].events[0].time_label }}</span>
-      </div>
+    <div class="flex flex--col">
+      <span class="title title--small">{{ days[0].events[0].title }}</span>
+      <span class="label text--yellow">{{ days[0].events[0].time_label }}</span>
     </div>
   {% elsif events and events.size > 0 %}
-    <div class="item">
-      <div class="meta"></div>
-      <div class="icon">
-        <img class="image--adaptive image--xsmall" alt="" src="https://trmnl.com/images/plugins/weather/wi-time-3.svg">
-      </div>
-      <div class="content">
-        <span class="title title--small">{{ events[0].title }}</span>
-        <span class="label text--yellow">{{ events[0].time_label }}</span>
-      </div>
+    <div class="flex flex--col">
+      <span class="title title--small">{{ events[0].title }}</span>
+      <span class="label text--yellow">{{ events[0].time_label }}</span>
     </div>
   {% endif %}
   {% if trmnl.device.percent_charged %}

@@ -155,8 +155,9 @@ Manual:
 - Hosted Private Plugins wrap Screen/View — paste **layout + title_bar** only.
 - Sparse color: red/yellow for waste and precip attention; black for body.
 - Prefer glanceable lists over dense grids (this design uses a 7-day **list**, not a week grid).
+- **Avoid `bg--gray-*` card fills** on BWRY / 1-bit-ish previews — gray dither becomes dense black stipple and kills contrast. Frame cards with `outline` + `rounded--medium` (and gaps), not shaded backgrounds.
 
-Framework: [Color palettes](https://trmnl.com/framework/docs/3.3/color_palettes) · [Structure](https://trmnl.com/framework/docs/3.3/structure) · [Liquid 101](https://help.trmnl.com/en/articles/10671186-liquid-101)
+Framework: [Color palettes](https://trmnl.com/framework/docs/3.3/color_palettes) · [Outline](https://trmnl.com/framework/docs/3.3/outline) · [Structure](https://trmnl.com/framework/docs/3.3/structure) · [Liquid 101](https://help.trmnl.com/en/articles/10671186-liquid-101)
 
 ## License / ownership
 

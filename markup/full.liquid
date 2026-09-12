@@ -1,148 +1,111 @@
 {% comment %}
   Full-screen fridge dashboard for TRMNL BWRY (Private Plugin → Markup → Full).
-  Card / item blocks with adaptive weather icons — not a sparse centered list.
+  Card frames via outline + gaps — no bg--gray-* fills (those dither into dense black on BWRY).
   Payload: examples/sample-payload.json — weather, waste, 7-day calendar list.
   Battery: TRMNL device var only (trmnl.device.percent_charged) — never invent a server field.
   Preview device: TRMNL OG B/W/R/Y (screen--color-4bwry). Keep layout + title_bar siblings.
 {% endcomment %}
 
 <div class="layout layout--col gap--medium">
-  {% comment %} Weather: today (large) + tomorrow (compact) as bordered cards {% endcomment %}
+  {% comment %} Weather: today (large) + tomorrow (compact) as outlined frames {% endcomment %}
   <div class="grid grid--cols-3 gap--small">
-    <div class="col col--span-2 bg--gray-10 rounded--medium p--2">
-      <div class="grid grid--cols-6 gap--small">
-        <div class="row row--center col--span-2">
-          <img
-            class="image--adaptive image--small"
-            alt="{{ weather.today.condition | default: 'Weather' }}"
-            src="{{ weather.today.icon | default: 'https://trmnl.com/images/plugins/weather/wi-na.svg' }}"
-          >
-        </div>
-        <div class="col col--span-4 gap--xsmall">
-          <div class="item">
-            <div class="meta"></div>
-            <div class="content">
-              <span class="value value--xlarge" data-fit-value="true">
-                {% if weather.today.temp_f %}{{ weather.today.temp_f | round }}°F{% elsif weather.today.temp_c %}{{ weather.today.temp_c | round }}°C{% else %}—{% endif %}
-              </span>
-              <span class="label">
-                {% if weather.today.temp_c and weather.today.temp_f %}
-                  {{ weather.today.temp_c | round }}°C
-                {% endif %}
-                · {{ weather.today.condition | default: "—" }}
-              </span>
-            </div>
-          </div>
-          <div class="flex flex--row gap--small flex--wrap">
-            {% if weather.today.humidity %}
-              <div class="item">
-                <div class="meta"></div>
-                <div class="icon">
-                  <img class="image--adaptive image--xsmall" alt="Humidity" src="https://trmnl.com/images/plugins/weather/wi-humidity.svg">
-                </div>
-                <div class="content">
-                  <span class="value value--xsmall">{{ weather.today.humidity }}%</span>
-                  <span class="label">Humidity</span>
-                </div>
-              </div>
+    <div class="col col--span-2 outline rounded--medium p--2 flex flex--col gap--small">
+      <div class="flex flex--row flex--center-y gap--medium">
+        <img
+          class="image--adaptive image--small"
+          alt="{{ weather.today.condition | default: 'Weather' }}"
+          src="{{ weather.today.icon | default: 'https://trmnl.com/images/plugins/weather/wi-na.svg' }}"
+        >
+        <div class="flex flex--col gap--xsmall grow">
+          <span class="value value--xlarge" data-fit-value="true">
+            {% if weather.today.temp_f %}{{ weather.today.temp_f | round }}°F{% elsif weather.today.temp_c %}{{ weather.today.temp_c | round }}°C{% else %}—{% endif %}
+          </span>
+          <span class="label">
+            {% if weather.today.temp_c and weather.today.temp_f %}
+              {{ weather.today.temp_c | round }}°C ·
             {% endif %}
-            {% if weather.today.cloud_cover %}
-              <div class="item">
-                <div class="meta"></div>
-                <div class="icon">
-                  <img class="image--adaptive image--xsmall" alt="Cloud" src="https://trmnl.com/images/plugins/weather/wi-cloud.svg">
-                </div>
-                <div class="content">
-                  <span class="value value--xsmall">{{ weather.today.cloud_cover }}%</span>
-                  <span class="label">Cloud</span>
-                </div>
-              </div>
-            {% endif %}
-            {% if weather.today.low_f and weather.today.high_f %}
-              <div class="item">
-                <div class="meta"></div>
-                <div class="icon">
-                  <img class="image--adaptive image--xsmall" alt="Range" src="https://trmnl.com/images/plugins/weather/wi-thermometer.svg">
-                </div>
-                <div class="content">
-                  <span class="value value--xsmall">{{ weather.today.low_f | round }}° / {{ weather.today.high_f | round }}°</span>
-                  <span class="label">Low / High</span>
-                </div>
-              </div>
-            {% endif %}
-          </div>
+            {{ weather.today.condition | default: "—" }}
+          </span>
         </div>
       </div>
 
+      <div class="flex flex--row gap--medium flex--wrap">
+        {% if weather.today.humidity %}
+          <div class="flex flex--row flex--center-y gap--xsmall">
+            <img class="image--adaptive image--xsmall" alt="Humidity" src="https://trmnl.com/images/plugins/weather/wi-humidity.svg">
+            <div class="flex flex--col">
+              <span class="value value--xsmall">{{ weather.today.humidity }}%</span>
+              <span class="label">Humidity</span>
+            </div>
+          </div>
+        {% endif %}
+        {% if weather.today.cloud_cover %}
+          <div class="flex flex--row flex--center-y gap--xsmall">
+            <img class="image--adaptive image--xsmall" alt="Cloud" src="https://trmnl.com/images/plugins/weather/wi-cloud.svg">
+            <div class="flex flex--col">
+              <span class="value value--xsmall">{{ weather.today.cloud_cover }}%</span>
+              <span class="label">Cloud</span>
+            </div>
+          </div>
+        {% endif %}
+        {% if weather.today.low_f and weather.today.high_f %}
+          <div class="flex flex--row flex--center-y gap--xsmall">
+            <img class="image--adaptive image--xsmall" alt="Range" src="https://trmnl.com/images/plugins/weather/wi-thermometer.svg">
+            <div class="flex flex--col">
+              <span class="value value--xsmall">{{ weather.today.low_f | round }}° / {{ weather.today.high_f | round }}°</span>
+              <span class="label">Low / High</span>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+
       {% if weather.today.precip_slots and weather.today.precip_slots.size > 0 %}
-        <div class="flex flex--row gap--xsmall flex--wrap mt--1">
+        <div class="flex flex--row gap--small flex--wrap">
           {% for slot in weather.today.precip_slots limit: 4 %}
-            <div class="item bg--gray-20 rounded--small px--1">
-              <div class="meta"></div>
-              <div class="icon">
-                <img class="image--adaptive image--xsmall" alt="Precip" src="https://trmnl.com/images/plugins/weather/wi-umbrella.svg">
-              </div>
-              <div class="content">
-                <span class="value value--xsmall text--yellow">{{ slot.label }}</span>
-                <span class="label">
-                  {{ slot.probability }}{% if slot.mm > 0 %} · {{ slot.mm }}mm{% endif %}
-                </span>
-              </div>
+            <div class="flex flex--col gap--xsmall">
+              <span class="label text--yellow">{{ slot.label }}</span>
+              <span class="description">
+                {{ slot.probability }}{% if slot.mm > 0 %} · {{ slot.mm }}mm{% endif %}
+              </span>
             </div>
           {% endfor %}
         </div>
       {% elsif weather.today.precip_summary and weather.today.precip_summary != "No precip" and weather.today.precip_summary != "—" %}
-        <div class="item mt--1">
-          <div class="meta"></div>
-          <div class="icon">
-            <img class="image--adaptive image--xsmall" alt="Precip" src="https://trmnl.com/images/plugins/weather/wi-raindrops.svg">
-          </div>
-          <div class="content">
-            <span class="label text--yellow">{{ weather.today.precip_summary }}</span>
-          </div>
+        <div class="flex flex--row flex--center-y gap--xsmall">
+          <img class="image--adaptive image--xsmall" alt="Precip" src="https://trmnl.com/images/plugins/weather/wi-raindrops.svg">
+          <span class="label text--yellow">{{ weather.today.precip_summary }}</span>
         </div>
       {% endif %}
     </div>
 
-    <div class="col col--span-1 bg--gray-10 rounded--medium p--2">
-      <div class="item">
-        <div class="meta"></div>
-        <div class="icon">
-          <img
-            class="image--adaptive image--xsmall"
-            alt="{{ weather.tomorrow.condition | default: 'Tomorrow' }}"
-            src="{{ weather.tomorrow.icon | default: 'https://trmnl.com/images/plugins/weather/wi-na.svg' }}"
-          >
-        </div>
-        <div class="content">
+    <div class="col col--span-1 outline rounded--medium p--2 flex flex--col gap--small">
+      <div class="flex flex--row flex--center-y gap--small">
+        <img
+          class="image--adaptive image--xsmall"
+          alt="{{ weather.tomorrow.condition | default: 'Tomorrow' }}"
+          src="{{ weather.tomorrow.icon | default: 'https://trmnl.com/images/plugins/weather/wi-na.svg' }}"
+        >
+        <div class="flex flex--col">
           <span class="value value--small">Tomorrow</span>
           <span class="label">{{ weather.tomorrow.condition | default: "—" }}</span>
         </div>
       </div>
       {% if weather.tomorrow.low_f and weather.tomorrow.high_f %}
-        <div class="item">
-          <div class="meta"></div>
-          <div class="content">
-            <span class="value value--xsmall">{{ weather.tomorrow.low_f | round }}° / {{ weather.tomorrow.high_f | round }}°</span>
-            <span class="label">
-              {% if weather.tomorrow.low_c and weather.tomorrow.high_c %}
-                {{ weather.tomorrow.low_c | round }}–{{ weather.tomorrow.high_c | round }}°C
-              {% else %}
-                L / H
-              {% endif %}
-            </span>
-          </div>
+        <div class="flex flex--col">
+          <span class="value value--xsmall">{{ weather.tomorrow.low_f | round }}° / {{ weather.tomorrow.high_f | round }}°</span>
+          <span class="label">
+            {% if weather.tomorrow.low_c and weather.tomorrow.high_c %}
+              {{ weather.tomorrow.low_c | round }}–{{ weather.tomorrow.high_c | round }}°C
+            {% else %}
+              L / H
+            {% endif %}
+          </span>
         </div>
       {% endif %}
       {% if weather.tomorrow.precip_summary and weather.tomorrow.precip_summary != "No precip" and weather.tomorrow.precip_summary != "—" %}
-        <div class="item">
-          <div class="meta"></div>
-          <div class="icon">
-            <img class="image--adaptive image--xsmall" alt="Precip" src="https://trmnl.com/images/plugins/weather/wi-umbrella.svg">
-          </div>
-          <div class="content">
-            <span class="label text--yellow">{{ weather.tomorrow.precip_summary | truncate: 36 }}</span>
-          </div>
+        <div class="flex flex--row flex--center-y gap--xsmall">
+          <img class="image--adaptive image--xsmall" alt="Precip" src="https://trmnl.com/images/plugins/weather/wi-umbrella.svg">
+          <span class="label text--yellow">{{ weather.tomorrow.precip_summary | truncate: 36 }}</span>
         </div>
       {% endif %}
     </div>
@@ -152,28 +115,22 @@
   <div class="flex flex--row flex--between flex--center-y gap--small">
     <div class="flex flex--row gap--small flex--center-y flex--wrap">
       {% if trmnl.device.percent_charged %}
-        <div class="item bg--gray-10 rounded--medium px--2">
-          <div class="meta"></div>
-          <div class="icon">
-            <img class="image--adaptive image--xsmall" alt="Battery" src="https://trmnl.com/images/plugins/weather/wi-barometer.svg">
-          </div>
-          <div class="content">
+        <div class="outline rounded--medium px--2 py--1 flex flex--row flex--center-y gap--xsmall">
+          <img class="image--adaptive image--xsmall" alt="Battery" src="https://trmnl.com/images/plugins/weather/wi-barometer.svg">
+          <div class="flex flex--col">
             <span class="value value--xsmall">{{ trmnl.device.percent_charged | round }}%</span>
             <span class="label">Battery</span>
           </div>
         </div>
       {% endif %}
       {% if waste.active %}
-        <div class="item item--emphasis-2 bg--gray-10 rounded--medium px--2">
-          <div class="meta"></div>
-          <div class="icon">
-            {% if waste.kind == "trash_recycle" %}
-              <img class="image--adaptive image--xsmall" alt="Recycle" src="https://trmnl.com/images/plugins/weather/wi-refresh.svg">
-            {% else %}
-              <img class="image--adaptive image--xsmall" alt="Trash" src="https://trmnl.com/images/plugins/weather/wi-dust.svg">
-            {% endif %}
-          </div>
-          <div class="content">
+        <div class="outline rounded--medium px--2 py--1 flex flex--row flex--center-y gap--xsmall">
+          {% if waste.kind == "trash_recycle" %}
+            <img class="image--adaptive image--xsmall" alt="Recycle" src="https://trmnl.com/images/plugins/weather/wi-refresh.svg">
+          {% else %}
+            <img class="image--adaptive image--xsmall" alt="Trash" src="https://trmnl.com/images/plugins/weather/wi-dust.svg">
+          {% endif %}
+          <div class="flex flex--col">
             <span class="value value--xsmall {% if waste.kind == 'trash_recycle' %}text--yellow{% else %}text--red{% endif %}">
               {{ waste.label | default: "Bins out" }}
             </span>
@@ -189,14 +146,11 @@
     </span>
   </div>
 
-  {% comment %} Calendar: bordered day blocks; always today/tomorrow; skip empty later days {% endcomment %}
-  <div class="bg--gray-10 rounded--medium p--2 flex flex--col gap--small">
-    <div class="item">
-      <div class="meta"></div>
-      <div class="icon">
-        <img class="image--adaptive image--xsmall" alt="Calendar" src="https://trmnl.com/images/plugins/weather/wi-time-4.svg">
-      </div>
-      <div class="content">
+  {% comment %} Calendar: outlined day blocks; always today/tomorrow; skip empty later days {% endcomment %}
+  <div class="outline rounded--medium p--2 flex flex--col gap--small">
+    <div class="flex flex--row flex--center-y gap--xsmall">
+      <img class="image--adaptive image--xsmall" alt="Calendar" src="https://trmnl.com/images/plugins/weather/wi-time-4.svg">
+      <div class="flex flex--col">
         <span class="value value--small">Next 7 days</span>
         <span class="label">Calendar</span>
       </div>
@@ -220,15 +174,9 @@
             <span class="label {% if day.is_today %}text--yellow{% endif %}">{{ day.label }}</span>
             {% if day.events and day.events.size > 0 %}
               {% for event in day.events %}
-                <div class="item">
-                  <div class="meta"></div>
-                  <div class="icon">
-                    <img class="image--adaptive image--xsmall" alt="" src="https://trmnl.com/images/plugins/weather/wi-time-3.svg">
-                  </div>
-                  <div class="content">
-                    <span class="title title--small">{{ event.title }}</span>
-                    <span class="label {% if event.all_day %}text--yellow{% endif %}">{{ event.time_label }}</span>
-                  </div>
+                <div class="flex flex--row flex--between flex--center-y gap--small">
+                  <span class="title title--small">{{ event.title }}</span>
+                  <span class="label {% if event.all_day %}text--yellow{% endif %}">{{ event.time_label }}</span>
                 </div>
               {% endfor %}
             {% else %}
@@ -239,13 +187,9 @@
       {% endfor %}
     {% elsif events and events.size > 0 %}
       {% for event in events %}
-        <div class="item">
-          <div class="meta"></div>
-          <div class="icon">
-            <img class="image--adaptive image--xsmall" alt="" src="https://trmnl.com/images/plugins/weather/wi-time-3.svg">
-          </div>
-          <div class="content">
-            <span class="label">{{ event.day_label }}</span>
+        <div class="flex flex--col gap--xsmall">
+          <span class="label">{{ event.day_label }}</span>
+          <div class="flex flex--row flex--between flex--center-y gap--small">
             <span class="title title--small">{{ event.title }}</span>
             <span class="label">{{ event.time_label }}</span>
           </div>
