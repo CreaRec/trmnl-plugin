@@ -1,11 +1,18 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { AddressInfo } from "node:net";
 import { createServer } from "../src/server.js";
 import { buildHealthPayload } from "../src/payload.js";
+import { TEST_DEFAULT_POLL_TOKEN } from "../src/poll-auth.js";
 
 const servers: ReturnType<typeof createServer>[] = [];
+const TOKEN = "11111111-2222-4333-8444-555555555555";
+
+beforeEach(() => {
+  process.env.TRMNL_POLL_TOKEN = TOKEN;
+});
 
 afterEach(async () => {
+  delete process.env.TRMNL_POLL_TOKEN;
   await Promise.all(
     servers.splice(0).map(
       (server) =>
@@ -27,7 +34,7 @@ async function listen(): Promise<string> {
 }
 
 describe("trmnl-plugin HTTP", () => {
-  it("GET /health returns ok payload", async () => {
+  it("GET /health returns ok payload without token", async () => {
     const base = await listen();
     const res = await fetch(`${base}/health`);
     expect(res.status).toBe(200);
@@ -37,10 +44,31 @@ describe("trmnl-plugin HTTP", () => {
     expect(await res.json()).toEqual(buildHealthPayload());
   });
 
-  it("GET / returns fridge dashboard JSON with live updated_at", async () => {
-    const before = Date.now();
+  it("GET / without token returns 401 unauthorized", async () => {
     const base = await listen();
     const res = await fetch(`${base}/`);
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: "unauthorized" });
+  });
+
+  it("GET /poll without token returns 401 unauthorized", async () => {
+    const base = await listen();
+    const res = await fetch(`${base}/poll`);
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: "unauthorized" });
+  });
+
+  it("GET / with wrong token returns 401", async () => {
+    const base = await listen();
+    const res = await fetch(`${base}/?token=00000000-0000-4000-8000-000000000099`);
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: "unauthorized" });
+  });
+
+  it("GET /?token= correct returns fridge dashboard JSON", async () => {
+    const before = Date.now();
+    const base = await listen();
+    const res = await fetch(`${base}/?token=${TOKEN}`);
     const after = Date.now();
     expect(res.status).toBe(200);
     expect(res.headers.get("cache-control")).toBe("no-store");
@@ -75,18 +103,28 @@ describe("trmnl-plugin HTTP", () => {
     );
   });
 
-  it("GET /poll matches GET / shape", async () => {
+  it("authorized path and query forms return matching payload shape", async () => {
     const base = await listen();
-    const [root, poll] = await Promise.all([
-      fetch(`${base}/`).then((r) => r.json()),
-      fetch(`${base}/poll`).then((r) => r.json()),
-    ]);
-    const { updated_at: _a, ...rootRest } = root as Record<string, unknown>;
-    const { updated_at: _b, ...pollRest } = poll as Record<string, unknown>;
-    expect(pollRest).toEqual(rootRest);
+    const urls = [
+      `${base}/?token=${TOKEN}`,
+      `${base}/poll?token=${TOKEN}`,
+      `${base}/poll/${TOKEN}`,
+      `${base}/t/${TOKEN}`,
+    ];
+    const bodies = await Promise.all(
+      urls.map(async (url) => {
+        const res = await fetch(url);
+        expect(res.status).toBe(200);
+        return res.json() as Promise<Record<string, unknown>>;
+      }),
+    );
+    const shapes = bodies.map(({ updated_at: _, ...rest }) => rest);
+    for (let i = 1; i < shapes.length; i++) {
+      expect(shapes[i]).toEqual(shapes[0]);
+    }
   });
 
-  it("OPTIONS allows GET from anywhere", async () => {
+  it("OPTIONS allows GET from anywhere without token", async () => {
     const base = await listen();
     const res = await fetch(`${base}/`, { method: "OPTIONS" });
     expect(res.status).toBe(204);
@@ -96,15 +134,28 @@ describe("trmnl-plugin HTTP", () => {
     expect(res.headers.get("access-control-allow-methods")).toMatch(/POST/);
   });
 
-  it("refreshes updated_at between requests", async () => {
+  it("refreshes updated_at between authorized requests", async () => {
     const base = await listen();
-    const first = (await (await fetch(`${base}/`)).json()) as {
+    const first = (await (
+      await fetch(`${base}/poll/${TOKEN}`)
+    ).json()) as {
       updated_at: string;
     };
     await new Promise((r) => setTimeout(r, 5));
-    const second = (await (await fetch(`${base}/`)).json()) as {
+    const second = (await (
+      await fetch(`${base}/t/${TOKEN}`)
+    ).json()) as {
       updated_at: string;
     };
     expect(second.updated_at).not.toBe(first.updated_at);
+  });
+
+  it("uses test default token when TRMNL_POLL_TOKEN is unset (non-production)", async () => {
+    delete process.env.TRMNL_POLL_TOKEN;
+    const base = await listen();
+    const denied = await fetch(`${base}/`);
+    expect(denied.status).toBe(401);
+    const ok = await fetch(`${base}/poll/${TEST_DEFAULT_POLL_TOKEN}`);
+    expect(ok.status).toBe(200);
   });
 });

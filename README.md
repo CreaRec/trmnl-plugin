@@ -6,13 +6,13 @@ Dashboard: compact weather + optional device battery + Sunday waste badge, and a
 
 ## Polling URL (TRMNL)
 
-After deploy behind nginx on crearec.app:
+After deploy behind nginx on crearec.app, set `TRMNL_POLL_TOKEN` (a UUID) in the host `.env`. Polling URL:
 
 ```text
-https://crearec.app/trmnl
+https://crearec.app/trmnl/<uuid>
 ```
 
-Use that as the Private Plugin **Polling** URL (`GET`). Each response refreshes `updated_at` to now (ISO UTC). Health:
+Use that as the Private Plugin **Polling** URL (`GET`). Bare `https://crearec.app/trmnl` returns **401** without the token. Each response refreshes `updated_at` to now (ISO UTC). Health (no token):
 
 ```text
 https://crearec.app/trmnl/health
@@ -26,7 +26,7 @@ Web UI to drag dashboard blocks and preview the fridge layout (~800×480 BWRY). 
 http://100.118.169.52:8799/studio/
 ```
 
-Public poll stays at `https://crearec.app/trmnl` (TRMNL Polling). Studio layout API is on the same Tailscale host (`/studio/layout`).
+Public poll is tokenized at `https://crearec.app/trmnl/<uuid>` (TRMNL Polling). Studio layout API is on the same Tailscale host (`/studio/layout`).
 
 - **localStorage** (`trmnl-studio-layout-v1`) — instant client-side persistence while editing.
 - **Server sync** — `GET`/`PUT`/`POST` `http://100.118.169.52:8799/studio/layout` writes JSON under `STUDIO_LAYOUT_PATH` (compose volume `./data`). Browser localStorage alone is not readable by agents; sync so Senior Pomidor (or any agent) can later `GET` the layout and update Liquid in the repo.
@@ -35,23 +35,29 @@ Buttons: Save locally · Sync to server · Load from server · Reset default. Dr
 
 Local (without Tailscale bind): `http://127.0.0.1:8799/studio/`.
 
-Local / Docker defaults: `HOST=0.0.0.0` `PORT=8799` → `http://127.0.0.1:8799/` and `/health`. Alias: `GET /poll`.
+Local / Docker defaults: `HOST=0.0.0.0` `PORT=8799`. Authorized poll forms (any one):
+
+- `GET /poll/<token>`
+- `GET /t/<token>`
+- `GET /?token=<token>` and `GET /poll?token=<token>`
+
+Without a valid token, poll endpoints return `401` `{"error":"unauthorized"}`. Health stays open.
 
 ## Folder layout
 
 ```text
 .
 ├── README.md
-├── .env.example                  # Placeholder env only (never commit real ICS URL)
+├── .env.example                  # Placeholder env only (never commit real ICS URL / token)
 ├── src/                          # Node 22 + TypeScript poll server
 ├── studio/                       # Layout playground UI (HTML/CSS/JS)
 ├── test/
 │   └── fixtures/sample.ics       # Tiny synthetic ICS (no iCloud URL)
 ├── Dockerfile
-├── docker-compose.yml            # Includes ./data volume for Studio layout
+├── docker-compose.yml            # Loopback + Tailscale :8799 + ./data volume
 ├── deploy/
 │   ├── docker-compose.yml        # Loopback + Tailscale :8799 + env_file + ./data
-│   └── nginx-trmnl.conf          # /trmnl, /health, /poll (Studio via Tailscale only)
+│   └── nginx-trmnl.conf          # /trmnl/<uuid>, /health, /poll (Studio via Tailscale only)
 ├── docs/
 │   └── trmnl-private-plugin.md
 ├── examples/
@@ -70,6 +76,7 @@ Copy `.env.example` → `.env` (gitignored). On the Debian host, create `/home/c
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
+| `TRMNL_POLL_TOKEN` | _(required in production)_ | UUID secret for poll URLs. Never commit a real value. |
 | `CALENDAR_ICS_URL` | _(empty)_ | Published iCloud ICS (`https://…`). `webcal://` is rewritten to `https://`. |
 | `WEATHER_LAT` | `30.4394` | Open-Meteo latitude (Pflugerville TX area) |
 | `WEATHER_LON` | `-97.6200` | Open-Meteo longitude |
@@ -85,7 +92,7 @@ ICS is cached in memory ~10 minutes; weather ~20 minutes.
 Root fields (see [`examples/sample-payload.json`](examples/sample-payload.json)):
 
 - `title`, `plugin_label`, `updated_at`
-- `weather.today` / `weather.tomorrow` — temps (°C/°F), humidity, cloud cover, WMO condition text, adaptive `icon` URL (`https://trmnl.com/images/plugins/weather/wi-….svg`), low/high, `precip_slots[]`, `precip_summary`
+- `weather.today` / `weather.tomorrow` — temps (°C/°F), humidity, cloud cover, WMO condition text, adaptive `icon` URL, low/high, `precip_slots[]`, `precip_summary`
 - `waste` — `{ active, kind: "trash"|"trash_recycle"|null, label, is_sunday }` (`active` only on Sundays)
 - `events[]` — flat list for the next 7 days
 - `days[]` — group-friendly `{ key, label, is_today, is_tomorrow, events[] }`
@@ -103,7 +110,7 @@ Waste is **not** injected into the calendar.
 
 - A TRMNL device (BWRY recommended)
 - **Developer Edition** / Developer perks enabled
-- No secrets in git — keep the real ICS URL in host `.env` only
+- No secrets in git — keep the real ICS URL and `TRMNL_POLL_TOKEN` in host `.env` only
 
 ## Create a Private Plugin in TRMNL
 
@@ -121,7 +128,7 @@ Official guide: [Private Plugins](https://help.trmnl.com/en/articles/9510536-pri
 ## Set a polling URL
 
 1. Strategy → **Polling** → verb `GET`
-2. URL → `https://crearec.app/trmnl`
+2. URL → `https://crearec.app/trmnl/<your-TRMNL_POLL_TOKEN-uuid>`
 
 **Single URL:** root fields bind as `{{ weather.today.temp_f }}`, `{{ days }}`, …  
 **Multiple URLs:** `{{ IDX_0.… }}`.
@@ -133,13 +140,14 @@ More detail: [docs/trmnl-private-plugin.md](docs/trmnl-private-plugin.md)
 ## Run locally
 
 ```sh
-cp .env.example .env   # edit CALENDAR_ICS_URL if you have one
+cp .env.example .env   # edit CALENDAR_ICS_URL + TRMNL_POLL_TOKEN
 npm ci
 npm test
 npm run build
 npm start
 # or: npm run dev
-curl -sS http://127.0.0.1:8799/ | jq .
+TOKEN=$(grep '^TRMNL_POLL_TOKEN=' .env | cut -d= -f2-)
+curl -sS "http://127.0.0.1:8799/poll/${TOKEN}" | jq .
 curl -sS http://127.0.0.1:8799/health
 curl -sS http://127.0.0.1:8799/studio/layout | jq .
 # open http://127.0.0.1:8799/studio/
@@ -159,20 +167,21 @@ CI on `main` publishes `ghcr.io/crearec/trmnl-plugin:main` (+ `sha-*`) and SSH-d
 Manual:
 
 1. Copy `deploy/nginx-trmnl.conf` into `/etc/nginx/snippets/` and `include` it from the crearec.app site.
-   **Debian must update this snippet and reload nginx after deploy** (`sudo nginx -t && sudo systemctl reload nginx`) so public `/trmnl/studio` is **removed** (Studio is Tailscale-only).
+   **Debian must update this snippet and reload nginx** (`sudo nginx -t && sudo systemctl reload nginx`) so `/trmnl/<uuid>` is routed, bare `/trmnl` returns 401, and public `/trmnl/studio` stays **removed** (Studio is Tailscale-only).
 2. Place `deploy/docker-compose.yml` at `/home/crearec/trmnl-plugin/docker-compose.yml`.
-3. Ensure `/home/crearec/trmnl-plugin/.env` exists (`env_file: .env` in compose).
+3. Ensure `/home/crearec/trmnl-plugin/.env` exists with `TRMNL_POLL_TOKEN=<uuid>` (`env_file: .env` in compose). Never commit the real token.
 4. Ensure `./data` exists next to compose (Studio layout volume) — `mkdir -p data`.
 5. `docker compose pull && docker compose up -d` (binds `127.0.0.1:8799` and Tailscale `100.118.169.52:8799`).
 6. `curl -sS https://crearec.app/trmnl/health`
-7. `curl -sS http://100.118.169.52:8799/studio/layout` (on Tailscale)
+7. `curl -sS https://crearec.app/trmnl/$TRMNL_POLL_TOKEN | jq .`
+8. `curl -sS http://100.118.169.52:8799/studio/layout` (on Tailscale)
 
 | Path | Backend |
 | --- | --- |
-| `/trmnl` | `http://127.0.0.1:8799/` |
-| `/trmnl/` | 301 → `/trmnl` |
+| `/trmnl/<uuid>` | `http://127.0.0.1:8799/poll/<uuid>` |
+| `/trmnl` / `/trmnl/` | **401** `{"error":"unauthorized"}` (no bare poll) |
 | `/trmnl/health` | `http://127.0.0.1:8799/health` |
-| `/trmnl/poll` | `http://127.0.0.1:8799/poll` |
+| `/trmnl/poll` | `http://127.0.0.1:8799/poll` (needs `?token=` or 401) |
 | Studio (no public nginx) | `http://100.118.169.52:8799/studio/` |
 
 ## BWRY notes
