@@ -341,7 +341,7 @@ function weatherCardHtml(day, label, opts = {}) {
           src="${esc(icon)}"
         >
         <div class="creafridge-weather__text flex flex--col gap--xsmall grow">
-          <span class="value creafridge-weather__temp" data-fit-value="true">${esc(temp)}</span>
+          <span class="value creafridge-weather__temp">${esc(temp)}</span>
           <span class="label creafridge-weather__meta">${esc(condition)}${esc(range)}</span>
         </div>
       </div>

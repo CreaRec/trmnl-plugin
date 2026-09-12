@@ -4,20 +4,32 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>CreaFridge Studio</title>
-    <link rel="stylesheet" href="./studio.css" />
     <script>
-      /* Probe TRMNL framework CSS; keep preview usable if CDN fails. */
+      /* Probe TRMNL framework CSS; keep preview usable if CDN fails.
+         Load studio.css AFTER plugins.css so creafridge size rules win. */
       (function () {
+        function addStudioCss() {
+          if (document.querySelector('link[data-studio-css]')) return;
+          var studio = document.createElement("link");
+          studio.rel = "stylesheet";
+          studio.href = "./studio.css";
+          studio.dataset.studioCss = "1";
+          document.head.appendChild(studio);
+        }
         var link = document.createElement("link");
         link.rel = "stylesheet";
         link.href = "https://trmnl.com/css/latest/plugins.css";
         link.onload = function () {
           document.documentElement.classList.add("has-trmnl-css");
+          addStudioCss();
         };
         link.onerror = function () {
           document.documentElement.classList.add("no-trmnl-css");
+          addStudioCss();
         };
         document.head.appendChild(link);
+        // Fallback if CDN is slow — still get Studio chrome styles quickly
+        setTimeout(addStudioCss, 400);
         var js = document.createElement("script");
         js.src = "https://trmnl.com/js/latest/plugins.js";
         js.async = true;

@@ -30,12 +30,17 @@
   .creafridge-weather__text { min-width: 0; flex: 1 1 auto; overflow: hidden; }
   .creafridge-weather__temp {
     font-size: min(var(--cf-temp, 1.4em), 22cqw) !important;
-    line-height: 1.05;
+    line-height: 1.05 !important;
     min-width: 0;
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .creafridge-weather img.creafridge-weather__icon {
+    width: min(var(--cf-icon, 28px), 28cqmin) !important;
+    height: min(var(--cf-icon, 28px), 28cqmin) !important;
+    max-width: 32% !important;
   }
   .creafridge-weather__meta {
     font-size: var(--cf-meta, 0.85em);
@@ -78,7 +83,7 @@
           src="{{ weather.today.icon | default: 'https://trmnl.com/images/plugins/weather/wi-na.svg' }}"
         >
         <div class="creafridge-weather__text flex flex--col gap--xsmall grow">
-          <span class="value creafridge-weather__temp" data-fit-value="true">
+          <span class="value creafridge-weather__temp">
             {% if weather.today.temp_c %}{{ weather.today.temp_c | round }}°C{% else %}—{% endif %}
           </span>
           <span class="label creafridge-weather__meta">
@@ -97,7 +102,7 @@
           src="{{ weather.tomorrow.icon | default: 'https://trmnl.com/images/plugins/weather/wi-na.svg' }}"
         >
         <div class="creafridge-weather__text flex flex--col gap--xsmall grow">
-          <span class="value creafridge-weather__temp" data-fit-value="true">
+          <span class="value creafridge-weather__temp">
             {% if weather.tomorrow.temp_c %}{{ weather.tomorrow.temp_c | round }}°C{% elsif weather.tomorrow.high_c %}{{ weather.tomorrow.high_c | round }}°C{% else %}—{% endif %}
           </span>
           <span class="label creafridge-weather__meta">

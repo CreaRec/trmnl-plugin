@@ -85,7 +85,7 @@ function weatherSnippet(
       src="{{ ${prefix}.icon | default: 'https://trmnl.com/images/plugins/weather/wi-na.svg' }}"
     >
     <div class="creafridge-weather__text flex flex--col gap--xsmall grow">
-      <span class="value creafridge-weather__temp" data-fit-value="true">
+      <span class="value creafridge-weather__temp">
         ${tempLiquid}
       </span>
       <span class="label creafridge-weather__meta">
@@ -216,12 +216,21 @@ export const CREAFRIDGE_BLOCK_CSS = `
   }
   .creafridge-weather__temp {
     font-size: min(var(--cf-temp, 1.4em), 22cqw) !important;
-    line-height: 1.05;
+    line-height: 1.05 !important;
     min-width: 0;
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .creafridge-weather .creafridge-weather__temp.value,
+  .creafridge-weather span.creafridge-weather__temp {
+    font-size: min(var(--cf-temp, 1.4em), 22cqw) !important;
+  }
+  .creafridge-weather img.creafridge-weather__icon {
+    width: min(var(--cf-icon, 28px), 28cqmin) !important;
+    height: min(var(--cf-icon, 28px), 28cqmin) !important;
+    max-width: 32% !important;
   }
   .creafridge-weather__meta {
     font-size: var(--cf-meta, 0.85em);
