@@ -3,8 +3,11 @@ services:
     image: ghcr.io/crearec/trmnl-plugin:main
     container_name: trmnl-plugin
     restart: unless-stopped
+    # Local: loopback. Debian host: also bind Tailscale IP for Studio.
+    # Studio (Tailscale only): http://100.118.169.52:8799/studio/
     ports:
-      - "8799:8799"
+      - "127.0.0.1:8799:8799"
+      - "100.118.169.52:8799:8799"
     env_file:
       - path: .env
         required: false

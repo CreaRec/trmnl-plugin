@@ -1,5 +1,6 @@
 # Deploy copy for Debian host (/home/crearec/trmnl-plugin).
-# Bind to loopback — nginx on crearec.app proxies /trmnl → :8799.
+# Publish on loopback (nginx → /trmnl poll) and Tailscale IP (Studio UI).
+# Hardcoded host Tailscale IP 100.118.169.52 — Studio: http://100.118.169.52:8799/studio/
 # Create /home/crearec/trmnl-plugin/.env out-of-band (CALENDAR_ICS_URL, weather vars).
 # Persist Studio layout JSON via ./data volume (STUDIO_LAYOUT_PATH).
 services:
@@ -9,6 +10,7 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:8799:8799"
+      - "100.118.169.52:8799:8799"
     env_file:
       - .env
     environment:

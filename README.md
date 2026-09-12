@@ -18,20 +18,22 @@ Use that as the Private Plugin **Polling** URL (`GET`). Each response refreshes 
 https://crearec.app/trmnl/health
 ```
 
-### Studio (layout playground)
+### Studio (layout playground) — Tailscale only
 
-Web UI to drag dashboard blocks and preview the fridge layout (~800×480 BWRY):
+Web UI to drag dashboard blocks and preview the fridge layout (~800×480 BWRY). **Not** exposed on crearec.app; use Tailscale:
 
 ```text
-https://crearec.app/trmnl/studio
+http://100.118.169.52:8799/studio/
 ```
 
+Public poll stays at `https://crearec.app/trmnl` (TRMNL Polling). Studio layout API is on the same Tailscale host (`/studio/layout`).
+
 - **localStorage** (`trmnl-studio-layout-v1`) — instant client-side persistence while editing.
-- **Server sync** — `GET`/`PUT`/`POST` `https://crearec.app/trmnl/studio/layout` writes JSON under `STUDIO_LAYOUT_PATH` (compose volume `./data`). Browser localStorage alone is not readable by agents; sync so Senior Pomidor (or any agent) can later `GET` the layout and update Liquid in the repo.
+- **Server sync** — `GET`/`PUT`/`POST` `http://100.118.169.52:8799/studio/layout` writes JSON under `STUDIO_LAYOUT_PATH` (compose volume `./data`). Browser localStorage alone is not readable by agents; sync so Senior Pomidor (or any agent) can later `GET` the layout and update Liquid in the repo.
 
 Buttons: Save locally · Sync to server · Load from server · Reset default. Drop auto-saves locally; optional debounced auto-sync to the server.
 
-Local: `http://127.0.0.1:8799/studio/`.
+Local (without Tailscale bind): `http://127.0.0.1:8799/studio/`.
 
 Local / Docker defaults: `HOST=0.0.0.0` `PORT=8799` → `http://127.0.0.1:8799/` and `/health`. Alias: `GET /poll`.
 
@@ -48,8 +50,8 @@ Local / Docker defaults: `HOST=0.0.0.0` `PORT=8799` → `http://127.0.0.1:8799/`
 ├── Dockerfile
 ├── docker-compose.yml            # Includes ./data volume for Studio layout
 ├── deploy/
-│   ├── docker-compose.yml        # Loopback bind + env_file + ./data volume
-│   └── nginx-trmnl.conf          # /trmnl, /health, /poll, /studio
+│   ├── docker-compose.yml        # Loopback + Tailscale :8799 + env_file + ./data
+│   └── nginx-trmnl.conf          # /trmnl, /health, /poll (Studio via Tailscale only)
 ├── docs/
 │   └── trmnl-private-plugin.md
 ├── examples/
@@ -157,13 +159,13 @@ CI on `main` publishes `ghcr.io/crearec/trmnl-plugin:main` (+ `sha-*`) and SSH-d
 Manual:
 
 1. Copy `deploy/nginx-trmnl.conf` into `/etc/nginx/snippets/` and `include` it from the crearec.app site.
-   **Debian must update this snippet and reload nginx after deploy** (`sudo nginx -t && sudo systemctl reload nginx`) so `/trmnl/studio` is routed.
+   **Debian must update this snippet and reload nginx after deploy** (`sudo nginx -t && sudo systemctl reload nginx`) so public `/trmnl/studio` is **removed** (Studio is Tailscale-only).
 2. Place `deploy/docker-compose.yml` at `/home/crearec/trmnl-plugin/docker-compose.yml`.
 3. Ensure `/home/crearec/trmnl-plugin/.env` exists (`env_file: .env` in compose).
 4. Ensure `./data` exists next to compose (Studio layout volume) — `mkdir -p data`.
-5. `docker compose pull && docker compose up -d`
+5. `docker compose pull && docker compose up -d` (binds `127.0.0.1:8799` and Tailscale `100.118.169.52:8799`).
 6. `curl -sS https://crearec.app/trmnl/health`
-7. `curl -sS https://crearec.app/trmnl/studio/layout`
+7. `curl -sS http://100.118.169.52:8799/studio/layout` (on Tailscale)
 
 | Path | Backend |
 | --- | --- |
@@ -171,8 +173,7 @@ Manual:
 | `/trmnl/` | 301 → `/trmnl` |
 | `/trmnl/health` | `http://127.0.0.1:8799/health` |
 | `/trmnl/poll` | `http://127.0.0.1:8799/poll` |
-| `/trmnl/studio` | 301 → `/trmnl/studio/` |
-| `/trmnl/studio/` | `http://127.0.0.1:8799/studio/` (UI, assets, `/layout` API) |
+| Studio (no public nginx) | `http://100.118.169.52:8799/studio/` |
 
 ## BWRY notes
 
