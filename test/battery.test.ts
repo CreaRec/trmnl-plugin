@@ -52,8 +52,11 @@ describe("weatherSizeMetrics", () => {
     expect(mid.tempEm).toBeLessThan(large.tempEm);
     expect(tiny.iconPx).toBeLessThanOrEqual(mid.iconPx);
     expect(mid.iconPx).toBeLessThanOrEqual(large.iconPx);
-    expect(mid.tempEm).toBeGreaterThanOrEqual(0.8);
-    expect(large.tempEm).toBeLessThanOrEqual(2.1);
+    expect(mid.tempEm).toBeGreaterThanOrEqual(0.72);
+    expect(large.tempEm).toBeLessThanOrEqual(1.75);
+    // Mid width must leave room for icon + "34°C" without needing huge type
+    expect(mid.tempEm).toBeLessThanOrEqual(1.35);
+    expect(tiny.tempEm).toBeLessThanOrEqual(1.05);
   });
 });
 

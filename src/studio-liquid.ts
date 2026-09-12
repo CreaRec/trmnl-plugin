@@ -31,22 +31,27 @@ export function weatherSizeMetrics(
   const ww = Math.max(1, Math.trunc(w));
   const hh = Math.max(1, Math.trunc(h));
   const short = Math.min(ww, hh);
-  // Rough content width after padding (~66.7px/col, ~8px pad each side)
-  const contentW = Math.max(24, ww * 66.7 - 16);
-  const iconPx = Math.round(
-    Math.min(40, Math.max(14, 10 + short * 6 + Math.min(ww, 5) * 1.5)),
-  );
-  const gapPx = Math.round(Math.min(10, Math.max(2, 2 + short * 1.25)));
-  // Temp must fit beside icon: reserve icon + gap, then scale em to remaining width
-  const remaining = Math.max(20, contentW - iconPx - gapPx);
-  // ~0.55em per digit-width at ~11px root; "34°C" ≈ 4 chars
-  const tempFromWidth = remaining / (4 * 11);
-  const tempFromSpan = 0.55 + short * 0.2 + Math.min(ww, 6) * 0.06;
+  // Cell ≈ 66.7×60; subtract outline padding + title row when tall enough
+  const contentW = Math.max(20, ww * 66.7 - 20);
+  const titleReserve = hh <= 2 || ww <= 2 ? 0 : 18;
+  const contentH = Math.max(18, hh * 60 - 16 - titleReserve);
+
+  // Icon: grow with span but never claim more than ~28% of content width / 55% height
+  let iconPx = Math.round(10 + short * 5 + Math.min(ww, 5) * 1.25);
+  iconPx = Math.min(iconPx, Math.floor(contentW * 0.28), Math.floor(contentH * 0.55));
+  iconPx = Math.max(12, iconPx);
+
+  const gapPx = Math.round(Math.min(8, Math.max(2, 1 + short)));
+  const remaining = Math.max(14, contentW - iconPx - gapPx);
+  // "34°C" ≈ 4 glyphs; display fonts are wide — ~18px per em-width unit
+  const tempFromWidth = remaining / (4 * 18);
+  const tempFromSpan = 0.62 + (ww - 1) * 0.12 + (hh - 1) * 0.06;
   const tempEm =
-    Math.round(Math.min(2.1, Math.max(0.8, Math.min(tempFromWidth, tempFromSpan))) * 100) /
-    100;
+    Math.round(
+      Math.min(1.75, Math.max(0.72, Math.min(tempFromWidth, tempFromSpan))) * 100,
+    ) / 100;
   const metaEm =
-    Math.round(Math.min(0.95, Math.max(0.6, 0.55 + short * 0.07)) * 100) / 100;
+    Math.round(Math.min(0.9, Math.max(0.55, 0.5 + short * 0.06)) * 100) / 100;
   return { iconPx, tempEm, gapPx, metaEm };
 }
 
@@ -187,7 +192,7 @@ function gridPlacement(block: LayoutBlock): string {
 
 /** Shared device + Studio styles for weather variants, battery, trash, calendar. */
 export const CREAFRIDGE_BLOCK_CSS = `
-  .creafridge-weather { min-width: 0; min-height: 0; }
+  .creafridge-weather { min-width: 0; min-height: 0; container-type: size; }
   .creafridge-weather__body {
     display: flex;
     flex-direction: row;
@@ -195,10 +200,12 @@ export const CREAFRIDGE_BLOCK_CSS = `
     min-width: 0;
     flex: 1 1 auto;
     gap: var(--cf-gap, 8px);
+    overflow: hidden;
   }
   .creafridge-weather__icon {
-    width: var(--cf-icon, 28px);
-    height: var(--cf-icon, 28px);
+    width: min(var(--cf-icon, 28px), 28cqmin);
+    height: min(var(--cf-icon, 28px), 28cqmin);
+    max-width: 32%;
     flex-shrink: 0;
     object-fit: contain;
   }
@@ -208,7 +215,7 @@ export const CREAFRIDGE_BLOCK_CSS = `
     overflow: hidden;
   }
   .creafridge-weather__temp {
-    font-size: var(--cf-temp, 1.4em) !important;
+    font-size: min(var(--cf-temp, 1.4em), 22cqw) !important;
     line-height: 1.05;
     min-width: 0;
     max-width: 100%;

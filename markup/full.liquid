@@ -10,7 +10,7 @@
 {% endcomment %}
 
 <style>
-  .creafridge-weather { min-width: 0; min-height: 0; }
+  .creafridge-weather { min-width: 0; min-height: 0; container-type: size; }
   .creafridge-weather__body {
     display: flex;
     flex-direction: row;
@@ -18,16 +18,18 @@
     min-width: 0;
     flex: 1 1 auto;
     gap: var(--cf-gap, 8px);
+    overflow: hidden;
   }
   .creafridge-weather__icon {
-    width: var(--cf-icon, 28px);
-    height: var(--cf-icon, 28px);
+    width: min(var(--cf-icon, 28px), 28cqmin);
+    height: min(var(--cf-icon, 28px), 28cqmin);
+    max-width: 32%;
     flex-shrink: 0;
     object-fit: contain;
   }
   .creafridge-weather__text { min-width: 0; flex: 1 1 auto; overflow: hidden; }
   .creafridge-weather__temp {
-    font-size: var(--cf-temp, 1.4em) !important;
+    font-size: min(var(--cf-temp, 1.4em), 22cqw) !important;
     line-height: 1.05;
     min-width: 0;
     max-width: 100%;
