@@ -1,3 +1,5 @@
+// Layout playground only. Device rendering source of truth is markup/full.liquid
+// (aligned to default block order below: half/half weather, status, calendar).
 const STORAGE_KEY = "trmnl-studio-layout-v1";
 const BLOCK_IDS = [
   "weather_today",
@@ -7,9 +9,9 @@ const BLOCK_IDS = [
 ];
 
 const LABELS = {
-  weather_today: "Weather · today",
-  weather_tomorrow: "Weather · tomorrow",
-  status: "Status · battery + waste",
+  weather_today: "Weather · Today",
+  weather_tomorrow: "Weather · Tomorrow",
+  status: "Status · Battery + Waste",
   calendar: "Calendar · 7 days",
 };
 
