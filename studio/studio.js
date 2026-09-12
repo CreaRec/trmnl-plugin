@@ -1,3 +1,5 @@
+// Layout playground. Screen body mirrors markup/full.liquid (TRMNL framework
+// classes). DnD chrome lives in the side rail — never inside the 800×480 cards.
 const STORAGE_KEY = "trmnl-studio-layout-v1";
 const BLOCK_IDS = [
   "weather_today",
@@ -7,9 +9,9 @@ const BLOCK_IDS = [
 ];
 
 const LABELS = {
-  weather_today: "Weather · today",
-  weather_tomorrow: "Weather · tomorrow",
-  status: "Status · battery + waste",
+  weather_today: "Weather · Today",
+  weather_tomorrow: "Weather · Tomorrow",
+  status: "Status · Battery + Waste",
   calendar: "Calendar · 7 days",
 };
 
@@ -77,7 +79,6 @@ function normalizeLayout(raw) {
       });
     }
   }
-  // Preserve saved order for known ids
   const ordered = [];
   const seen = new Set();
   for (const b of raw.blocks) {
@@ -131,111 +132,194 @@ function esc(s) {
     .replace(/"/g, "&quot;");
 }
 
-function weatherHtml(day, title) {
-  if (!day) {
-    return `<div class="muted">No weather data</div>`;
-  }
-  const temp =
-    day.temp_f != null
-      ? `${Math.round(day.temp_f)}°F`
-      : day.temp_c != null
-        ? `${Math.round(day.temp_c)}°C`
-        : "—";
+/**
+ * Weather card — matches markup/full.liquid weather col.
+ * @param {{ preferHigh?: boolean }} opts preferHigh mirrors Liquid tomorrow fallbacks
+ */
+function weatherCardHtml(day, label, opts = {}) {
+  const preferHigh = Boolean(opts.preferHigh);
+  const condition = day?.condition || "—";
+  const icon =
+    day?.icon || "https://trmnl.com/images/plugins/weather/wi-na.svg";
+  let temp = "—";
+  if (day?.temp_f != null) temp = `${Math.round(day.temp_f)}°F`;
+  else if (preferHigh && day?.high_f != null)
+    temp = `${Math.round(day.high_f)}°F`;
+  else if (day?.temp_c != null) temp = `${Math.round(day.temp_c)}°C`;
+  else if (preferHigh && day?.high_c != null)
+    temp = `${Math.round(day.high_c)}°C`;
+
   const range =
-    day.low_f != null && day.high_f != null
-      ? `${Math.round(day.low_f)}° / ${Math.round(day.high_f)}°`
+    day?.low_f != null && day?.high_f != null
+      ? ` · ${Math.round(day.low_f)}° / ${Math.round(day.high_f)}°`
       : "";
-  const icon = day.icon || "https://trmnl.com/images/plugins/weather/wi-na.svg";
+
   return `
-    <div class="studio-weather">
-      <img alt="${esc(day.condition || title)}" src="${esc(icon)}" width="40" height="40" />
-      <div class="temps">
-        <strong>${esc(temp)}</strong>
-        <span>${esc(day.condition || "—")}${range ? ` · ${esc(range)}` : ""}</span>
-        ${day.precip_summary && day.precip_summary !== "No precip" && day.precip_summary !== "—"
-          ? `<span class="text-yellow">${esc(day.precip_summary)}</span>`
-          : ""}
+    <div class="col outline rounded--medium p--2 flex flex--col gap--small">
+      <span class="label">${esc(label)}</span>
+      <div class="flex flex--row flex--center-y gap--medium">
+        <img
+          class="image--adaptive image--small"
+          alt="${esc(condition)}"
+          src="${esc(icon)}"
+        >
+        <div class="flex flex--col gap--xsmall grow">
+          <span class="value value--xlarge" data-fit-value="true">${esc(temp)}</span>
+          <span class="label">${esc(condition)}${esc(range)}</span>
+        </div>
       </div>
     </div>`;
 }
 
-function statusHtml(poll) {
+/**
+ * Status card — Liquid parity:
+ * battery pill only when trmnl.device.percent_charged is present;
+ * waste pill only when waste.active (omit inactive waste).
+ */
+function statusCardHtml(poll) {
   const waste = poll?.waste;
   const battery = poll?.trmnl?.device?.percent_charged;
-  const parts = [];
-  if (battery != null) {
-    parts.push(`<span class="badge">Battery ${esc(battery)}%</span>`);
-  } else {
-    parts.push(`<span class="badge muted">Battery (device var)</span>`);
+  const pills = [];
+
+  if (battery != null && battery !== "") {
+    const pct =
+      typeof battery === "number" ? Math.round(battery) : esc(battery);
+    pills.push(`
+      <div class="outline rounded--medium px--2 py--1">
+        <span class="value value--xsmall">Battery ${pct}%</span>
+      </div>`);
   }
-  if (waste?.active && waste.label) {
-    const cls =
-      waste.kind === "trash_recycle" ? "badge badge--waste-recycle" : "badge badge--waste";
-    parts.push(`<span class="${cls}">${esc(waste.label)}</span>`);
-  } else {
-    parts.push(`<span class="badge muted">No waste today</span>`);
+
+  if (waste?.active) {
+    const colorCls =
+      waste.kind === "trash_recycle" ? "text--yellow" : "text--red";
+    const label = waste.label || "Bins out";
+    pills.push(`
+      <div class="outline rounded--medium px--2 py--1">
+        <span class="value value--xsmall ${colorCls}">${esc(label)}</span>
+      </div>`);
   }
-  return `<div class="studio-status-row">${parts.join("")}</div>`;
+
+  return `
+    <div class="outline rounded--medium p--2 flex flex--col gap--small">
+      <span class="label">${esc(LABELS.status)}</span>
+      <div class="flex flex--row gap--small flex--center-y flex--wrap">
+        ${pills.join("")}
+      </div>
+    </div>`;
 }
 
-function calendarHtml(poll) {
+/** Calendar card — every day in days[]; events or "—". */
+function calendarCardHtml(poll) {
   const days = Array.isArray(poll?.days) ? poll.days : [];
-  if (!days.length) {
-    return `<div class="muted">No calendar days</div>`;
+  const events = Array.isArray(poll?.events) ? poll.events : [];
+
+  let rows = "";
+  if (days.length > 0) {
+    rows = days
+      .map((day) => {
+        const dayEvents = Array.isArray(day.events) ? day.events : [];
+        const labelCls = day.is_today ? "label text--yellow" : "label";
+        let body;
+        if (dayEvents.length > 0) {
+          body = dayEvents
+            .map(
+              (e) =>
+                `<span class="title title--small">${esc(e.time_label || "")} ${esc(e.title || "")}</span>`,
+            )
+            .join("");
+        } else {
+          body = `<span class="description">—</span>`;
+        }
+        return `
+          <div class="grid grid--cols-4 gap--xsmall">
+            <div class="col">
+              <span class="${labelCls}">${esc(day.label || day.key || "")}</span>
+            </div>
+            <div class="col col--span-3 flex flex--col gap--xsmall">
+              ${body}
+            </div>
+          </div>`;
+      })
+      .join("");
+  } else if (events.length > 0) {
+    rows = events
+      .map(
+        (event) => `
+          <div class="grid grid--cols-4 gap--xsmall">
+            <div class="col">
+              <span class="label">${esc(event.day_label || "")}</span>
+            </div>
+            <div class="col col--span-3">
+              <span class="title title--small">${esc(event.time_label || "")} ${esc(event.title || "")}</span>
+            </div>
+          </div>`,
+      )
+      .join("");
+  } else {
+    rows = `<span class="description">—</span>`;
   }
-  const items = days
-    .map((day) => {
-      const events = Array.isArray(day.events) ? day.events : [];
-      const text =
-        events.length === 0
-          ? `<span class="muted">—</span>`
-          : events
-              .slice(0, 4)
-              .map(
-                (e) =>
-                  `${esc(e.time_label || "")} ${esc(e.title || "")}`.trim(),
-              )
-              .join("<br>");
-      return `<li class="studio-cal-day">
-        <span class="studio-cal-day__label">${esc(day.label || day.key)}</span>
-        <span class="studio-cal-day__events">${text}</span>
-      </li>`;
-    })
-    .join("");
-  return `<ul class="studio-cal-list">${items}</ul>`;
+
+  return `
+    <div class="outline rounded--medium p--2 flex flex--col gap--small">
+      <span class="label">${esc(LABELS.calendar)}</span>
+      <div class="flex flex--col gap--xsmall">
+        ${rows}
+      </div>
+    </div>`;
 }
 
-function blockBody(id, poll) {
-  switch (id) {
+function blockCardHtml(block, poll) {
+  switch (block.id) {
     case "weather_today":
-      return weatherHtml(poll?.weather?.today, "Today");
+      return weatherCardHtml(poll?.weather?.today, LABELS.weather_today);
     case "weather_tomorrow":
-      return weatherHtml(poll?.weather?.tomorrow, "Tomorrow");
+      return weatherCardHtml(poll?.weather?.tomorrow, LABELS.weather_tomorrow, {
+        preferHigh: true,
+      });
     case "status":
-      return statusHtml(poll);
+      return statusCardHtml(poll);
     case "calendar":
-      return calendarHtml(poll);
+      return calendarCardHtml(poll);
     default:
       return "";
   }
 }
 
-function blockElement(block, index, total) {
+/** Group consecutive half-width blocks into grid--cols-2 like Liquid. */
+function screenBodyHtml(blocks, poll) {
+  const parts = [];
+  let i = 0;
+  while (i < blocks.length) {
+    const cur = blocks[i];
+    const next = blocks[i + 1];
+    if (cur.width === "half" && next && next.width === "half") {
+      parts.push(`
+        <div class="grid grid--cols-2 gap--small">
+          ${blockCardHtml(cur, poll)}
+          ${blockCardHtml(next, poll)}
+        </div>`);
+      i += 2;
+    } else {
+      parts.push(blockCardHtml(cur, poll));
+      i += 1;
+    }
+  }
+  return parts.join("");
+}
+
+function railItemElement(block, index, total) {
   const el = document.createElement("div");
-  el.className = "studio-block outline rounded--medium p--2";
+  el.className = "studio-rail__item";
   el.dataset.blockId = block.id;
-  el.dataset.width = block.width || "full";
   el.draggable = true;
   el.innerHTML = `
-    <div class="studio-block__chrome">
-      <span class="studio-block__label">${esc(LABELS[block.id] || block.id)}</span>
-      <div class="studio-block__controls">
-        <button type="button" data-move="up" aria-label="Move up" ${index === 0 ? "disabled" : ""}>↑</button>
-        <button type="button" data-move="down" aria-label="Move down" ${index === total - 1 ? "disabled" : ""}>↓</button>
-        <span class="studio-block__handle" aria-hidden="true">⠿</span>
-      </div>
+    <span class="studio-rail__label">${esc(LABELS[block.id] || block.id)}</span>
+    <div class="studio-rail__controls">
+      <button type="button" data-move="up" aria-label="Move up" ${index === 0 ? "disabled" : ""}>↑</button>
+      <button type="button" data-move="down" aria-label="Move down" ${index === total - 1 ? "disabled" : ""}>↓</button>
+      <span class="studio-rail__handle" aria-hidden="true">⠿</span>
     </div>
-    <div class="studio-block__body">${blockBody(block.id, state.poll)}</div>
   `;
   el.addEventListener("dragstart", onDragStart);
   el.addEventListener("dragend", onDragEnd);
@@ -248,7 +332,6 @@ function blockElement(block, index, total) {
       ev.stopPropagation();
       moveBlock(block.id, btn.getAttribute("data-move"));
     });
-    // Prevent drag from starting on buttons
     btn.addEventListener("mousedown", (ev) => ev.stopPropagation());
   });
   return el;
@@ -263,36 +346,59 @@ function moveBlock(id, direction) {
   const [moved] = blocks.splice(idx, 1);
   blocks.splice(target, 0, moved);
   state.layout = saveLocal({ ...state.layout, blocks });
-  renderBlocks();
+  render();
   setStatus("Saved locally (auto)", "ok");
   scheduleAutoSync();
 }
 
-function renderBlocks() {
-  const list = document.getElementById("block-list");
-  if (!list) return;
-  list.innerHTML = "";
-  const blocks = state.layout.blocks;
-  blocks.forEach((b, i) => {
-    list.appendChild(blockElement(b, i, blocks.length));
-  });
+function renderTitleBar() {
+  const titleEl = document.getElementById("title-bar-title");
+  const instanceEl = document.getElementById("title-bar-instance");
+  const poll = state.poll;
+  if (titleEl) {
+    titleEl.textContent =
+      poll?.plugin_label || poll?.title || "CreaFridge";
+  }
+  if (instanceEl) {
+    instanceEl.textContent =
+      poll?.trmnl?.plugin_settings?.instance_name || "My Plugin";
+  }
+}
+
+function render() {
+  const body = document.getElementById("screen-body");
+  if (body) {
+    body.innerHTML = screenBodyHtml(state.layout.blocks, state.poll);
+  }
+
+  const rail = document.getElementById("block-rail");
+  if (rail) {
+    rail.innerHTML = "";
+    const blocks = state.layout.blocks;
+    blocks.forEach((b, i) => {
+      rail.appendChild(railItemElement(b, i, blocks.length));
+    });
+  }
+
+  renderTitleBar();
 
   const screen = document.getElementById("screen");
-  if (screen && !document.documentElement.classList.contains("has-trmnl-css")) {
-    screen.classList.add("studio-fallback");
+  const hasCss = document.documentElement.classList.contains("has-trmnl-css");
+  if (screen) {
+    if (hasCss) screen.classList.remove("studio-fallback");
+    else screen.classList.add("studio-fallback");
   }
 
   const updated = document.getElementById("updated-label");
   if (updated) {
     updated.textContent = state.poll?.updated_at
-      ? `updated ${state.poll.updated_at}`
+      ? `CreaFridge updated ${state.poll.updated_at}`
       : "loading…";
   }
 }
 
 function onDragStart(ev) {
   const el = /** @type {HTMLElement} */ (ev.currentTarget);
-  // Don't start drag from control buttons
   if (ev.target instanceof HTMLElement && ev.target.closest("[data-move]")) {
     ev.preventDefault();
     return;
@@ -303,7 +409,6 @@ function onDragStart(ev) {
   if (state.dragId) {
     ev.dataTransfer.setData("text/plain", state.dragId);
   }
-  // Transparent drag image reduces nested-content ghosts
   try {
     const ghost = document.createElement("div");
     ghost.style.width = "1px";
@@ -353,7 +458,7 @@ function onDrop(ev) {
   const [moved] = blocks.splice(fromIdx, 1);
   blocks.splice(toIdx, 0, moved);
   state.layout = saveLocal({ ...state.layout, blocks });
-  renderBlocks();
+  render();
   setStatus("Saved locally (auto)", "ok");
   scheduleAutoSync();
 }
@@ -373,7 +478,7 @@ async function fetchPoll() {
   });
   if (!res.ok) throw new Error(`poll HTTP ${res.status}`);
   state.poll = await res.json();
-  renderBlocks();
+  render();
   setStatus(`Poll loaded · ${state.poll.updated_at || "ok"}`, "ok");
 }
 
@@ -394,7 +499,7 @@ async function syncToServer({ quiet = false } = {}) {
   const saved = await res.json();
   state.layout = normalizeLayout(saved);
   saveLocal(state.layout);
-  renderBlocks();
+  render();
   if (!quiet) setStatus(`Synced to server · ${saved.updated_at}`, "ok");
   else setStatus(`Auto-synced · ${saved.updated_at}`, "ok");
 }
@@ -407,13 +512,13 @@ async function loadFromServer() {
   if (!res.ok) throw new Error(`load HTTP ${res.status}`);
   const layout = normalizeLayout(await res.json());
   state.layout = saveLocal(layout);
-  renderBlocks();
+  render();
   setStatus(`Loaded from server · ${layout.updated_at}`, "ok");
 }
 
 function resetDefault() {
   state.layout = saveLocal(defaultLayout());
-  renderBlocks();
+  render();
   setStatus("Reset to default (local)", "ok");
 }
 
@@ -443,7 +548,6 @@ function wireActions() {
 }
 
 function ensureTrailingSlash() {
-  // Relative CSS/JS resolve correctly with a trailing slash.
   if (!location.pathname.endsWith("/") && !location.pathname.endsWith(".html")) {
     const next = `${location.pathname}/${location.search}${location.hash}`;
     history.replaceState(null, "", next);
@@ -454,8 +558,7 @@ async function boot() {
   ensureTrailingSlash();
   wireActions();
   state.layout = loadLocal();
-  renderBlocks();
-  // Mark fallback until CDN onload adds has-trmnl-css
+  render();
   setTimeout(() => {
     if (!document.documentElement.classList.contains("has-trmnl-css")) {
       document.documentElement.classList.add("no-trmnl-css");
@@ -467,7 +570,6 @@ async function boot() {
   } catch (e) {
     setStatus(e instanceof Error ? e.message : "poll failed", "err");
   }
-  // Refresh poll periodically
   setInterval(() => {
     void fetchPoll().catch(() => {});
   }, 60_000);

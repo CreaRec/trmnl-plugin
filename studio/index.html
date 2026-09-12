@@ -35,8 +35,9 @@
         <span class="studio-brand__sub">Studio</span>
       </div>
       <p class="studio-lede">
-        Drag blocks to preview the fridge dashboard (~800×480). Order saves in
-        localStorage and can sync to the server for Liquid updates.
+        Preview matches TRMNL Full markup (<code>markup/full.liquid</code>) —
+        framework classes inside the 800×480 screen. Reorder via the side rail;
+        order saves in localStorage and can sync to the server.
       </p>
       <div class="studio-actions" role="toolbar" aria-label="Layout actions">
         <button type="button" id="btn-save-local">Save locally</button>
@@ -48,25 +49,43 @@
         <button type="button" id="btn-refresh-poll">Refresh poll</button>
       </div>
       <p id="studio-status" class="studio-status" aria-live="polite"></p>
+      <p id="updated-label" class="studio-updated" aria-live="polite"></p>
     </header>
 
     <main class="studio-main">
       <section class="preview-wrap" aria-label="TRMNL OG preview">
-        <div class="preview-frame">
-          <div
-            id="screen"
-            class="screen screen--color-4bwry studio-screen"
-            data-studio-screen
-          >
-            <div class="title_bar">
-              <span class="title">CreaFridge</span>
-              <span class="instance" id="updated-label">—</span>
+        <div class="preview-stage">
+          <aside
+            id="block-rail"
+            class="studio-rail"
+            aria-label="Reorder blocks"
+          ></aside>
+          <div class="preview-frame">
+            <!-- .trmnl + .view--full required for plugins.css vars and column layout -->
+            <div class="trmnl">
+              <div
+                id="screen"
+                class="screen screen--og screen--color-4bwry studio-screen"
+                data-studio-screen
+              >
+                <div class="view view--full">
+                  <div
+                    id="screen-body"
+                    class="layout layout--col gap--medium"
+                    aria-label="Screen content"
+                  ></div>
+                  <div id="title-bar" class="title_bar">
+                    <img
+                      class="image image--adaptive"
+                      alt=""
+                      src="https://trmnl.com/images/plugins/weather--render.svg"
+                    />
+                    <span class="title" id="title-bar-title">CreaFridge</span>
+                    <span class="instance" id="title-bar-instance">My Plugin</span>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div
-              id="block-list"
-              class="layout layout--col gap--medium studio-blocks"
-              aria-label="Draggable blocks"
-            ></div>
           </div>
         </div>
       </section>

@@ -2,7 +2,7 @@
 
 Private Plugin markup + live JSON poller for a fridge-mounted **TRMNL BWRY** (black / white / red / yellow) e-ink display.
 
-Dashboard: compact weather + optional device battery + Sunday waste badge, and a **7-day calendar list** (published iCloud ICS).
+Dashboard: equal half weather cards (today / tomorrow), optional device battery + Sunday waste pills, and a **full 7-day calendar list** with `—` for empty days (published iCloud ICS).
 
 ## Polling URL (TRMNL)
 
@@ -30,6 +30,8 @@ Public poll is tokenized at `https://crearec.app/trmnl/<uuid>` (TRMNL Polling). 
 
 - **localStorage** (`trmnl-studio-layout-v1`) — instant client-side persistence while editing.
 - **Server sync** — `GET`/`PUT`/`POST` `http://100.118.169.52:8799/studio/layout` writes JSON under `STUDIO_LAYOUT_PATH` (compose volume `./data`). Browser localStorage alone is not readable by agents; sync so Senior Pomidor (or any agent) can later `GET` the layout and update Liquid in the repo.
+- **Device source of truth** — `markup/full.liquid` is what TRMNL renders on the fridge. Studio’s 800×480 screen body mirrors that Liquid with the same framework classes (`layout`, `grid--cols-2`, `outline`, `value--xlarge`, `title_bar`, …). Reorder chrome (↑↓⠿) lives in a **side rail** outside the screen so cards match the Markup Editor preview.
+- **Preview-only device vars** — `GET /studio/poll` merges `trmnl.device.percent_charged: 100` and `trmnl.plugin_settings.instance_name: "My Plugin"` so Studio can show the battery pill and title_bar instance like the Markup Editor. Authorized `/poll` never includes these (TRMNL injects them on device).
 
 Buttons: Save locally · Sync to server · Load from server · Reset default. Drop auto-saves locally; optional debounced auto-sync to the server.
 
@@ -63,7 +65,7 @@ Without a valid token, poll endpoints return `401` `{"error":"unauthorized"}`. H
 ├── examples/
 │   └── sample-payload.json
 └── markup/
-    ├── full.liquid               # Full layout (weather + waste + 7-day list)
+    ├── full.liquid               # Full layout (half/half weather, status pills, all 7 days)
     ├── half_horizontal.liquid
     ├── half_vertical.liquid
     ├── quadrant.liquid
@@ -97,7 +99,7 @@ Root fields (see [`examples/sample-payload.json`](examples/sample-payload.json))
 - `events[]` — flat list for the next 7 days
 - `days[]` — group-friendly `{ key, label, is_today, is_tomorrow, events[] }`
 
-**Battery is not a server field.** In Liquid, show a small badge only when TRMNL injects `trmnl.device.percent_charged` (see Markup Editor → Your Variables).
+**Battery is not a server field.** In Liquid, show a small badge only when TRMNL injects `trmnl.device.percent_charged` (see Markup Editor → Your Variables). Studio’s `/studio/poll` adds a **preview-only** `trmnl` object for parity; do not copy that into production poll responses.
 
 ### Waste schedule (America/Chicago)
 
@@ -118,10 +120,10 @@ Waste is **not** injected into the calendar.
 2. Strategy → **Polling** (recommended).
 3. Save, then **Edit Markup**.
 4. Paste from `markup/`:
-   - `full.liquid` → **Full**
+   - `full.liquid` → **Full** (outlined cards: Weather · Today | Tomorrow, Status · Battery + Waste, Calendar · 7 days listing every day)
    - optional half / quadrant tabs
    - `shared.liquid` → **Shared**
-5. Force Refresh; preview as **TRMNL OG (B/W/R/Y)**.
+5. Force Refresh; preview as **TRMNL OG (B/W/R/Y)**. Re-paste Full after markup changes in git — Studio sync does not push Liquid.
 
 Official guide: [Private Plugins](https://help.trmnl.com/en/articles/9510536-private-plugins)
 
@@ -189,7 +191,7 @@ Manual:
 - Palette: **`screen--color-4bwry`**.
 - Hosted Private Plugins wrap Screen/View — paste **layout + title_bar** only.
 - Sparse color: red/yellow for waste and precip attention; black for body.
-- Prefer glanceable lists over dense grids (this design uses a 7-day **list**, not a week grid).
+- Prefer glanceable lists over dense grids (Full uses a 7-day **list** of all days with `—` when empty — not a week grid, and not humidity/cloud mini-rows that crush the calendar).
 - **Avoid `bg--gray-*` card fills** on BWRY / 1-bit-ish previews — gray dither becomes dense black stipple and kills contrast. Frame cards with `outline` + `rounded--medium` (and gaps), not shaded backgrounds.
 
 Framework: [Color palettes](https://trmnl.com/framework/docs/3.3/color_palettes) · [Outline](https://trmnl.com/framework/docs/3.3/outline) · [Structure](https://trmnl.com/framework/docs/3.3/structure) · [Liquid 101](https://help.trmnl.com/en/articles/10671186-liquid-101)
