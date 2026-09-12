@@ -135,7 +135,11 @@ describe("studio routes", () => {
     expect(js).toContain("value value--xlarge");
     expect(js).toContain("renderTitleBar");
     expect(js).toContain("title-bar-instance");
-    expect(js).toContain("Battery");
+    expect(js).toContain("creafridge-battery");
+    expect(js).toContain("creafridge-weather");
+    expect(js).toContain("°C");
+    expect(js).not.toContain("°F");
+    expect(js).not.toContain('value--xsmall">Battery');
     expect(js).toContain("data-resize");
     expect(js).toContain("/liquid");
     expect(js).not.toContain("No waste today");
@@ -143,6 +147,7 @@ describe("studio routes", () => {
     expect(js).not.toContain("studio-weather");
     expect(js).not.toContain("studio-cal-list");
     expect(js).not.toContain("studio-rail");
+    expect(js).not.toContain("Status · Battery + Waste</span>");
   });
 
   it("GET /studio/layout returns default when file missing", async () => {
@@ -287,6 +292,9 @@ describe("studio routes", () => {
     expect(text).toMatch(/CreaFridge Studio/);
     expect(text).not.toMatch(/studio-/);
     expect(text).toMatch(/title_bar/);
+    expect(text).toMatch(/temp_c/);
+    expect(text).toMatch(/creafridge-battery/);
+    expect(text).not.toMatch(/Status · Battery \+ Waste/);
   });
 
   it("rejects invalid layout body", async () => {

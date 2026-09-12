@@ -28,9 +28,9 @@ export const BLOCK_IDS = [
 
 export type BlockId = (typeof BLOCK_IDS)[number];
 
-/** Per-block mins — status may be a single thin row. */
+/** Per-block mins — status is icon-only and fits a single cell. */
 export function minSizeFor(id: BlockId): { w: number; h: number } {
-  if (id === "status") return { w: 2, h: 1 };
+  if (id === "status") return { w: 1, h: 1 };
   return { w: MIN_BLOCK_W, h: MIN_BLOCK_H };
 }
 
