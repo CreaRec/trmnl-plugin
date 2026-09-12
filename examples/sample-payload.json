@@ -1,0 +1,20 @@
+{
+  "title": "CreaFridge",
+  "plugin_label": "CreaFridge",
+  "updated_at": "2026-09-12T10:30:00Z",
+  "home_status": "home",
+  "home_summary": "Everyone accounted for · doors locked",
+  "presence": [
+    { "name": "Nikita", "state": "home" },
+    { "name": "Partner", "state": "away" },
+    { "name": "Dogs", "state": "home" }
+  ],
+  "routines": [
+    { "time": "12:00", "title": "Lunch prep" },
+    { "time": "18:30", "title": "Walk + dinner" },
+    { "time": "22:00", "title": "Lockup checklist" }
+  ],
+  "alerts": [
+    "Trash night — bins to curb"
+  ]
+}

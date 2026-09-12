@@ -1,0 +1,16 @@
+{% comment %} Mashup: half horizontal — compact home + next routine {% endcomment %}
+
+<div class="layout layout--col gap--small">
+  <span class="title">{{ title | default: "CreaFridge" }}</span>
+  {% assign status = home_status | default: "—" %}
+  <span class="value {% if status == 'away' or status == 'empty' %}text--red{% endif %}">{{ status }}</span>
+  {% if routines and routines.size > 0 %}
+    <span class="description">
+      <span class="text--yellow">{{ routines[0].time }}</span> {{ routines[0].title }}
+    </span>
+  {% endif %}
+</div>
+
+<div class="title_bar">
+  <span class="title">{{ plugin_label | default: "Fridge" }}</span>
+</div>
