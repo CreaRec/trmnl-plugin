@@ -58,6 +58,22 @@ describe("trmnl-plugin HTTP", () => {
     expect(await res.json()).toEqual({ error: "unauthorized" });
   });
 
+  it("GET /studio/poll does not require token and matches authorized poll shape", async () => {
+    const base = await listen();
+    const [studio, authorized] = await Promise.all([
+      fetch(`${base}/studio/poll`),
+      fetch(`${base}/poll/${TOKEN}`),
+    ]);
+    expect(studio.status).toBe(200);
+    expect(authorized.status).toBe(200);
+    const studioBody = (await studio.json()) as Record<string, unknown>;
+    const authBody = (await authorized.json()) as Record<string, unknown>;
+    const { updated_at: _a, ...studioRest } = studioBody;
+    const { updated_at: _b, ...authRest } = authBody;
+    expect(studioRest).toEqual(authRest);
+    expect(studioBody.title).toBe("CreaFridge");
+  });
+
   it("GET / with wrong token returns 401", async () => {
     const base = await listen();
     const res = await fetch(`${base}/?token=00000000-0000-4000-8000-000000000099`);
