@@ -1,0 +1,19 @@
+{% comment %} Mashup: half vertical — presence list {% endcomment %}
+
+<div class="layout layout--col gap--small">
+  <span class="label">Presence</span>
+  {% if presence and presence.size > 0 %}
+    {% for person in presence limit: 5 %}
+      <div class="flex flex--row flex--between">
+        <span class="description">{{ person.name }}</span>
+        <span class="label {% if person.state == 'away' %}text--red{% endif %}">{{ person.state }}</span>
+      </div>
+    {% endfor %}
+  {% else %}
+    <span class="description">—</span>
+  {% endif %}
+</div>
+
+<div class="title_bar">
+  <span class="title">{{ plugin_label | default: "Presence" }}</span>
+</div>

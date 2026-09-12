@@ -1,0 +1,89 @@
+{% comment %}
+  Full-screen fridge glanceable for TRMNL BWRY (Private Plugin → Markup → Full).
+  Expects root-level fields from examples/sample-payload.json (polling or webhook).
+  Platform provides Screen/View; keep layout + title_bar as siblings.
+{% endcomment %}
+
+<div class="layout layout--col gap--medium">
+  <div class="flex flex--row flex--between flex--center-y">
+    <span class="title title--large">{{ title | default: "CreaFridge" }}</span>
+    <span class="label">
+      {% if updated_at %}
+        {{ updated_at | date: "%H:%M" }}
+      {% else %}
+        —
+      {% endif %}
+    </span>
+  </div>
+
+  {% comment %} Home status — red when away / alert-ish {% endcomment %}
+  <div class="flex flex--col gap--small">
+    <span class="label">Home</span>
+    {% assign status = home_status | default: "unknown" | downcase %}
+    {% if status == "away" or status == "empty" %}
+      <span class="value value--large text--red">{{ home_status }}</span>
+    {% elsif status == "home" or status == "occupied" %}
+      <span class="value value--large">{{ home_status }}</span>
+    {% else %}
+      <span class="value value--large text--yellow">{{ home_status }}</span>
+    {% endif %}
+    {% if home_summary %}
+      <span class="description">{{ home_summary }}</span>
+    {% endif %}
+  </div>
+
+  <div class="grid grid--cols-2 gap--medium">
+    {% comment %} Presence block {% endcomment %}
+    <div class="flex flex--col gap--small">
+      <span class="label">Presence</span>
+      {% if presence and presence.size > 0 %}
+        {% for person in presence limit: 4 %}
+          <div class="flex flex--row flex--between flex--center-y">
+            <span class="description">{{ person.name }}</span>
+            {% assign pstate = person.state | default: "" | downcase %}
+            {% if pstate == "home" %}
+              <span class="label">{{ person.state }}</span>
+            {% elsif pstate == "away" %}
+              <span class="label text--red">{{ person.state }}</span>
+            {% else %}
+              <span class="label text--yellow">{{ person.state }}</span>
+            {% endif %}
+          </div>
+        {% endfor %}
+      {% else %}
+        <span class="description">No presence data</span>
+      {% endif %}
+    </div>
+
+    {% comment %} Routine / next-up block {% endcomment %}
+    <div class="flex flex--col gap--small">
+      <span class="label">Routine</span>
+      {% if routines and routines.size > 0 %}
+        {% for item in routines limit: 4 %}
+          <div class="flex flex--col">
+            <span class="description">
+              {% if item.time %}<span class="text--yellow">{{ item.time }}</span> · {% endif %}{{ item.title }}
+            </span>
+          </div>
+        {% endfor %}
+      {% else %}
+        <span class="description">No routines</span>
+      {% endif %}
+    </div>
+  </div>
+
+  {% comment %} Alerts — use red sparingly {% endcomment %}
+  {% if alerts and alerts.size > 0 %}
+    <div class="flex flex--col gap--small">
+      <span class="label text--red">Alerts</span>
+      {% for alert in alerts limit: 3 %}
+        <span class="description text--red">{{ alert }}</span>
+      {% endfor %}
+    </div>
+  {% endif %}
+</div>
+
+<div class="title_bar">
+  <span class="title">{{ plugin_label | default: "CreaFridge" }}</span>
+  <span class="instance">{{ trmnl.plugin_settings.instance_name }}</span>
+</div>

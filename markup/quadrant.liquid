@@ -1,0 +1,12 @@
+{% comment %} Mashup: quadrant — single status chip {% endcomment %}
+
+<div class="layout layout--col layout--center gap--small">
+  <span class="label">{{ title | default: "Home" }}</span>
+  <span class="value {% if home_status == 'away' or home_status == 'empty' %}text--red{% elsif home_status != 'home' %}text--yellow{% endif %}">
+    {{ home_status | default: "—" }}
+  </span>
+</div>
+
+<div class="title_bar">
+  <span class="title">{{ plugin_label | default: "Status" }}</span>
+</div>
