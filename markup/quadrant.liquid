@@ -1,9 +1,17 @@
-{% comment %} Mashup: quadrant — temp + waste chip {% endcomment %}
+{% comment %} Mashup: quadrant — temp + icon + waste chip {% endcomment %}
 
 <div class="layout layout--col layout--center gap--small">
+  <img
+    class="image--adaptive image--small"
+    alt="{{ weather.today.condition | default: 'Weather' }}"
+    src="{{ weather.today.icon | default: 'https://trmnl.com/images/plugins/weather/wi-na.svg' }}"
+  >
   <span class="value">
-    {% if weather.today.temp_f %}{{ weather.today.temp_f | round }}°{% else %}—{% endif %}
+    {% if weather.today.temp_f %}{{ weather.today.temp_f | round }}°F{% else %}—{% endif %}
   </span>
+  {% if weather.today.temp_c %}
+    <span class="label">{{ weather.today.temp_c | round }}°C</span>
+  {% endif %}
   <span class="label">{{ weather.today.condition | default: "" }}</span>
   {% if waste.active %}
     <span class="label text--red">{{ waste.label }}</span>

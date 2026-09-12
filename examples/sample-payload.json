@@ -9,14 +9,16 @@
       "humidity": 48,
       "cloud_cover": 20,
       "condition": "Partly cloudy",
+      "icon": "https://trmnl.com/images/plugins/weather/wi-day-cloudy.svg",
       "low_c": 23.1,
       "high_c": 33.4,
       "low_f": 73.6,
       "high_f": 92.1,
       "precip_slots": [
-        { "time": "2026-09-13T22:00:00.000-05:00", "label": "5 PM", "mm": 0.4, "probability": 40 }
+        { "time": "2026-09-13T17:00:00.000-05:00", "label": "5 PM", "mm": 0.4, "probability": 40 },
+        { "time": "2026-09-13T18:00:00.000-05:00", "label": "6 PM", "mm": 0.1, "probability": 35 }
       ],
-      "precip_summary": "0.4 mm · peak 40% @ 5 PM"
+      "precip_summary": "0.5 mm · peak 40% @ 5 PM"
     },
     "tomorrow": {
       "temp_c": 34.0,
@@ -24,6 +26,7 @@
       "humidity": null,
       "cloud_cover": null,
       "condition": "Clear",
+      "icon": "https://trmnl.com/images/plugins/weather/wi-day-sunny.svg",
       "low_c": 22.5,
       "high_c": 34.0,
       "low_f": 72.5,
@@ -56,6 +59,15 @@
       "day_key": "2026-09-14",
       "day_label": "Tomorrow",
       "time_label": "6:00 PM–7:00 PM"
+    },
+    {
+      "start": "2026-09-15T16:30:00.000-05:00",
+      "end": "2026-09-15T19:00:00.000-05:00",
+      "title": "Liza's Birthday Party",
+      "all_day": false,
+      "day_key": "2026-09-15",
+      "day_label": "Mon 9/15",
+      "time_label": "4:30 PM–7:00 PM"
     }
   ],
   "days": [
@@ -90,6 +102,23 @@
           "day_key": "2026-09-14",
           "day_label": "Tomorrow",
           "time_label": "6:00 PM–7:00 PM"
+        }
+      ]
+    },
+    {
+      "key": "2026-09-15",
+      "label": "Mon 9/15",
+      "is_today": false,
+      "is_tomorrow": false,
+      "events": [
+        {
+          "start": "2026-09-15T16:30:00.000-05:00",
+          "end": "2026-09-15T19:00:00.000-05:00",
+          "title": "Liza's Birthday Party",
+          "all_day": false,
+          "day_key": "2026-09-15",
+          "day_label": "Mon 9/15",
+          "time_label": "4:30 PM–7:00 PM"
         }
       ]
     }

@@ -61,12 +61,18 @@ describe("trmnl-plugin HTTP", () => {
     expect(updatedMs).toBeLessThanOrEqual(after + 1000);
 
     const weather = body.weather as {
-      today: { condition: string; precip_slots: unknown[] };
-      tomorrow: { condition: string };
+      today: { condition: string; icon: string; precip_slots: unknown[] };
+      tomorrow: { condition: string; icon: string };
     };
     expect(weather.today.condition).toBeTypeOf("string");
+    expect(weather.today.icon).toMatch(
+      /^https:\/\/trmnl\.com\/images\/plugins\/weather\/wi-.+\.svg$/,
+    );
     expect(Array.isArray(weather.today.precip_slots)).toBe(true);
     expect(weather.tomorrow.condition).toBeTypeOf("string");
+    expect(weather.tomorrow.icon).toMatch(
+      /^https:\/\/trmnl\.com\/images\/plugins\/weather\/wi-.+\.svg$/,
+    );
   });
 
   it("GET /poll matches GET / shape", async () => {

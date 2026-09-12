@@ -52,7 +52,7 @@ See [`examples/sample-payload.json`](../examples/sample-payload.json).
 | Field | Notes |
 | --- | --- |
 | `updated_at` | ISO UTC, refreshed every poll |
-| `weather.today` / `.tomorrow` | Temps, condition (WMO text), precip slots/summary |
+| `weather.today` / `.tomorrow` | Temps, condition (WMO text), `icon` URL, precip slots/summary |
 | `waste` | Sunday-only badge; `kind` is `trash` or `trash_recycle` |
 | `events` / `days` | Next 7 days in `America/Chicago`; waste is not in the calendar |
 
@@ -80,7 +80,7 @@ Confirm the exact path under Markup Editor → **Your Variables** / `trmnl` (nam
 - Device palette: `screen--color-4bwry`.
 - Paste layout + `title_bar` only on hosted plugins.
 - Sparse `text--red` / `text--yellow` for waste and precip; black/gray for body.
-- Full layout: header weather (+ waste + optional battery), main = 7-day **event list**.
+- Full layout: card blocks — today/tomorrow weather with adaptive icons, status strip (battery + waste), calendar day rows (skip empty days after tomorrow).
 
 ## Wiring
 
