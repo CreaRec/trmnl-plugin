@@ -273,9 +273,9 @@ function weatherSizeMetrics(w, h) {
   const contentH = Math.max(18, hh * 60 - 8 - titleReserve);
 
   let iconPx = Math.round(10 + short * 5 + Math.min(ww, 5) * 1.25);
-  if (hh >= 3) iconPx += (hh - 2) * 8;
-  const iconWCap = hh >= 3 ? 0.4 : 0.3;
-  const iconHCap = hh >= 3 ? 0.7 : 0.5;
+  if (hh >= 3) iconPx = Math.round(Math.max(iconPx, contentH * (hh >= 4 ? 0.58 : 0.45)));
+  const iconWCap = hh >= 4 ? 0.48 : hh >= 3 ? 0.4 : 0.3;
+  const iconHCap = hh >= 4 ? 0.72 : hh >= 3 ? 0.62 : 0.5;
   iconPx = Math.min(
     iconPx,
     Math.floor(contentW * iconWCap),
@@ -285,9 +285,9 @@ function weatherSizeMetrics(w, h) {
 
   const gapPx = Math.round(Math.min(10, Math.max(2, short)));
   const remaining = Math.max(14, contentW - iconPx - gapPx);
-  const tempFromWidth = remaining / (4 * 16);
-  const tempFromSpan = 0.55 + (ww - 1) * 0.14 + (hh - 1) * 0.2;
-  const tempFromHeight = contentH / 52;
+  const tempFromWidth = remaining / (4 * 15);
+  const tempFromSpan = 0.55 + (ww - 1) * 0.14 + (hh - 1) * 0.22;
+  const tempFromHeight = contentH / (hh >= 4 ? 40 : 52);
   const tempCap =
     ww <= 2 || (ww <= 3 && hh <= 2)
       ? 1.05
@@ -295,7 +295,7 @@ function weatherSizeMetrics(w, h) {
         ? 1.35
         : hh <= 3
           ? 1.9
-          : 2.55;
+          : 3.1;
   const desired = Math.min(
     tempCap,
     Math.max(0.72, (tempFromSpan + tempFromHeight) / 2),
@@ -304,8 +304,8 @@ function weatherSizeMetrics(w, h) {
   const metaEm =
     Math.round(
       Math.min(
-        1.05,
-        Math.max(0.55, 0.5 + short * 0.07 + Math.max(0, hh - 2) * 0.04),
+        1.1,
+        Math.max(0.55, 0.5 + short * 0.07 + Math.max(0, hh - 2) * 0.05),
       ) * 100,
     ) / 100;
   return { iconPx, tempEm, gapPx, metaEm };

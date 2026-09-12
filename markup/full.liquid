@@ -35,12 +35,14 @@
     width: 100%;
   }
   .creafridge-weather__icon {
-    width: min(var(--cf-icon, 28px), 55cqh);
-    height: min(var(--cf-icon, 28px), 55cqh);
-    max-width: 42%;
+    width: var(--cf-icon, 28px);
+    height: var(--cf-icon, 28px);
+    max-width: none;
+    max-height: 85%;
     flex-shrink: 0;
     object-fit: contain;
     justify-self: start;
+    align-self: center;
   }
   .creafridge-weather__text {
     display: flex;
@@ -50,9 +52,10 @@
     overflow: hidden;
     text-align: left;
     justify-self: stretch;
+    align-self: center;
   }
   .creafridge-weather__temp {
-    font-size: min(var(--cf-temp, 1.4em), 42cqw) !important;
+    font-size: var(--cf-temp, 1.4em) !important;
     line-height: 1.05 !important;
     min-width: 0;
     max-width: 100%;
@@ -61,9 +64,11 @@
     white-space: nowrap;
   }
   .creafridge-weather img.creafridge-weather__icon {
-    width: min(var(--cf-icon, 28px), 55cqh) !important;
-    height: min(var(--cf-icon, 28px), 55cqh) !important;
-    max-width: 42% !important;
+    width: var(--cf-icon, 28px) !important;
+    height: var(--cf-icon, 28px) !important;
+    max-width: none !important;
+    max-height: 85% !important;
+    object-fit: contain !important;
   }
   .creafridge-weather__meta {
     font-size: var(--cf-meta, 0.85em);
@@ -128,7 +133,7 @@
 <div class="layout layout--col gap--medium">
   {% comment %} Weather row: two equal outlined halves (Studio: weather_today + weather_tomorrow) {% endcomment %}
   <div class="grid grid--cols-2 gap--small">
-    <div class="col outline rounded--medium creafridge-weather creafridge-weather--wide" style="--cf-cols:6;--cf-rows:3;--cf-icon:39px;--cf-temp:1.9em;--cf-gap:3px;--cf-meta:0.75em">
+    <div class="col outline rounded--medium creafridge-weather creafridge-weather--wide" style="--cf-cols:6;--cf-rows:3;--cf-icon:71px;--cf-temp:1.9em;--cf-gap:3px;--cf-meta:0.76em">
       <span class="label creafridge-weather__title">Weather · Today</span>
       <div class="creafridge-weather__body">
         <img
@@ -147,7 +152,7 @@
       </div>
     </div>
 
-    <div class="col outline rounded--medium creafridge-weather creafridge-weather--wide" style="--cf-cols:6;--cf-rows:3;--cf-icon:39px;--cf-temp:1.9em;--cf-gap:3px;--cf-meta:0.75em">
+    <div class="col outline rounded--medium creafridge-weather creafridge-weather--wide" style="--cf-cols:6;--cf-rows:3;--cf-icon:71px;--cf-temp:1.9em;--cf-gap:3px;--cf-meta:0.76em">
       <span class="label creafridge-weather__title">Weather · Tomorrow</span>
       <div class="creafridge-weather__body">
         <img

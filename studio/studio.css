@@ -286,12 +286,14 @@ html.has-trmnl-css .studio-screen {
 }
 
 .creafridge-weather__icon {
-  width: min(var(--cf-icon, 28px), 55cqh);
-  height: min(var(--cf-icon, 28px), 55cqh);
-  max-width: 42%;
+  width: var(--cf-icon, 28px);
+  height: var(--cf-icon, 28px);
+  max-width: none;
+  max-height: 85%;
   flex-shrink: 0;
   object-fit: contain;
   justify-self: start;
+  align-self: center;
 }
 
 .creafridge-weather__text {
@@ -302,10 +304,11 @@ html.has-trmnl-css .studio-screen {
   overflow: hidden;
   text-align: left;
   justify-self: stretch;
+  align-self: center;
 }
 
 .creafridge-weather__temp {
-  font-size: min(var(--cf-temp, 1.4em), 42cqw) !important;
+  font-size: var(--cf-temp, 1.4em) !important;
   line-height: 1.05 !important;
   min-width: 0;
   max-width: 100%;
@@ -317,13 +320,15 @@ html.has-trmnl-css .studio-screen {
 /* Defeat TRMNL .value / .image--adaptive sizing that fights cell metrics */
 .creafridge-weather .creafridge-weather__temp.value,
 .creafridge-weather span.creafridge-weather__temp {
-  font-size: min(var(--cf-temp, 1.4em), 42cqw) !important;
+  font-size: var(--cf-temp, 1.4em) !important;
 }
 
 .creafridge-weather img.creafridge-weather__icon {
-  width: min(var(--cf-icon, 28px), 55cqh) !important;
-  height: min(var(--cf-icon, 28px), 55cqh) !important;
-  max-width: 42% !important;
+  width: var(--cf-icon, 28px) !important;
+  height: var(--cf-icon, 28px) !important;
+  max-width: none !important;
+  max-height: 85% !important;
+  object-fit: contain !important;
 }
 
 .creafridge-weather__meta {
