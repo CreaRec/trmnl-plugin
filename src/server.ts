@@ -227,6 +227,27 @@ export async function handleRequest(
     return;
   }
 
+  // Studio-only poll preview (Tailscale/network-gated; no TRMNL_POLL_TOKEN)
+  if (path === "/studio/poll") {
+    if (method !== "GET" && method !== "HEAD") {
+      sendJson(res, 405, { error: "method_not_allowed" });
+      return;
+    }
+    if (method === "HEAD") {
+      res.writeHead(200, JSON_HEADERS);
+      res.end();
+      return;
+    }
+    try {
+      const body = await buildPollPayload();
+      sendJson(res, 200, body);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "unknown_error";
+      sendJson(res, 500, { error: "poll_failed", message });
+    }
+    return;
+  }
+
   // Studio HTML + static assets (redirect bare /studio → /studio/ for relative URLs)
   if (pathOnly === "/studio") {
     if (method !== "GET" && method !== "HEAD") {

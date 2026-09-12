@@ -37,9 +37,7 @@ function studioRootPath() {
 }
 
 function pollUrl() {
-  const root = studioRootPath();
-  if (root.startsWith("/trmnl")) return "/trmnl";
-  return "/poll";
+  return `${studioRootPath()}/poll`;
 }
 
 function layoutUrl() {

@@ -68,6 +68,42 @@ describe("studio routes", () => {
     expect(js.headers.get("content-type")).toMatch(/javascript/);
     expect(css.status).toBe(200);
     expect(css.headers.get("content-type")).toMatch(/css/);
+    const jsText = await js.text();
+    expect(jsText).toContain("${studioRootPath()}/poll");
+    expect(jsText).not.toContain('return "/poll"');
+    expect(jsText).not.toContain('return "/trmnl"');
+  });
+
+  it("GET /studio/poll returns poll JSON without token", async () => {
+    process.env.TRMNL_POLL_TOKEN = "11111111-2222-4333-8444-555555555555";
+    try {
+      const base = await listen();
+      const denied = await fetch(`${base}/poll`);
+      expect(denied.status).toBe(401);
+
+      const res = await fetch(`${base}/studio/poll`);
+      expect(res.status).toBe(200);
+      expect(res.headers.get("content-type")).toMatch(/application\/json/);
+      expect(res.headers.get("cache-control")).toBe("no-store");
+      const body = (await res.json()) as Record<string, unknown>;
+      expect(body.title).toBe("CreaFridge");
+      expect(body.plugin_label).toBe("CreaFridge");
+      expect(body.weather).toBeTypeOf("object");
+      expect(body.waste).toBeTypeOf("object");
+      expect(Array.isArray(body.events)).toBe(true);
+      expect(Array.isArray(body.days)).toBe(true);
+
+      const authorized = await fetch(
+        `${base}/poll/11111111-2222-4333-8444-555555555555`,
+      );
+      expect(authorized.status).toBe(200);
+      const authBody = (await authorized.json()) as Record<string, unknown>;
+      const { updated_at: _a, ...studioRest } = body;
+      const { updated_at: _b, ...authRest } = authBody;
+      expect(studioRest).toEqual(authRest);
+    } finally {
+      delete process.env.TRMNL_POLL_TOKEN;
+    }
   });
 
   it("GET /studio/layout returns default when file missing", async () => {
