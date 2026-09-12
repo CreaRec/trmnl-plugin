@@ -1,6 +1,6 @@
 import { DateTime } from "luxon";
 import { createTtlCache, type TtlCache } from "./cache.js";
-import { cToF, round1, wmoCondition } from "./wmo.js";
+import { cToF, round1, wmoCondition, wmoIconUrl } from "./wmo.js";
 
 export type PrecipSlot = {
   time: string;
@@ -15,6 +15,8 @@ export type DayWeather = {
   humidity: number | null;
   cloud_cover: number | null;
   condition: string;
+  /** Full TRMNL weather icon URL for adaptive `<img>`. */
+  icon: string;
   low_c: number | null;
   high_c: number | null;
   low_f: number | null;
@@ -157,6 +159,7 @@ function emptyDay(condition = "Unavailable"): DayWeather {
     humidity: null,
     cloud_cover: null,
     condition,
+    icon: wmoIconUrl(null),
     low_c: null,
     high_c: null,
     low_f: null,
@@ -198,6 +201,9 @@ export function mapOpenMeteoToWeather(
   const tomorrowSlots = precipSlotsForDay(data.hourly, tomorrowKey, zone);
 
   const currentTemp = data.current?.temperature_2m;
+  const todayCode = data.current?.weather_code ?? todayDaily?.code ?? null;
+  const tomorrowCode = tomorrowDaily?.code ?? null;
+
   const today: DayWeather = {
     temp_c: currentTemp != null ? round1(currentTemp) : null,
     temp_f: currentTemp != null ? cToF(currentTemp) : null,
@@ -209,9 +215,8 @@ export function mapOpenMeteoToWeather(
       data.current?.cloud_cover != null
         ? Math.round(data.current.cloud_cover)
         : null,
-    condition: wmoCondition(
-      data.current?.weather_code ?? todayDaily?.code ?? null,
-    ),
+    condition: wmoCondition(todayCode),
+    icon: wmoIconUrl(todayCode),
     low_c: todayDaily?.low != null ? round1(todayDaily.low) : null,
     high_c: todayDaily?.high != null ? round1(todayDaily.high) : null,
     low_f: todayDaily?.low != null ? cToF(todayDaily.low) : null,
@@ -225,7 +230,8 @@ export function mapOpenMeteoToWeather(
     temp_f: tomorrowDaily?.high != null ? cToF(tomorrowDaily.high) : null,
     humidity: null,
     cloud_cover: null,
-    condition: wmoCondition(tomorrowDaily?.code ?? null),
+    condition: wmoCondition(tomorrowCode),
+    icon: wmoIconUrl(tomorrowCode),
     low_c: tomorrowDaily?.low != null ? round1(tomorrowDaily.low) : null,
     high_c: tomorrowDaily?.high != null ? round1(tomorrowDaily.high) : null,
     low_f: tomorrowDaily?.low != null ? cToF(tomorrowDaily.low) : null,

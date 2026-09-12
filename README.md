@@ -66,7 +66,7 @@ ICS is cached in memory ~10 minutes; weather ~20 minutes.
 Root fields (see [`examples/sample-payload.json`](examples/sample-payload.json)):
 
 - `title`, `plugin_label`, `updated_at`
-- `weather.today` / `weather.tomorrow` — temps (°C/°F), humidity, cloud cover, WMO condition text, low/high, `precip_slots[]`, `precip_summary`
+- `weather.today` / `weather.tomorrow` — temps (°C/°F), humidity, cloud cover, WMO condition text, adaptive `icon` URL (`https://trmnl.com/images/plugins/weather/wi-….svg`), low/high, `precip_slots[]`, `precip_summary`
 - `waste` — `{ active, kind: "trash"|"trash_recycle"|null, label, is_sunday }` (`active` only on Sundays)
 - `events[]` — flat list for the next 7 days
 - `days[]` — group-friendly `{ key, label, is_today, is_tomorrow, events[] }`
