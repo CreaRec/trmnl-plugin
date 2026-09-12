@@ -1,28 +1,18 @@
-{% comment %} Mashup: half vertical — compact calendar item rows {% endcomment %}
+{% comment %} Mashup: half vertical — compact calendar day frames {% endcomment %}
 
 <div class="layout layout--col gap--small">
-  <div class="item">
-    <div class="meta"></div>
-    <div class="icon">
-      <img class="image--adaptive image--xsmall" alt="" src="https://trmnl.com/images/plugins/weather/wi-time-4.svg">
-    </div>
-    <div class="content">
-      <span class="value value--small">Calendar</span>
-    </div>
+  <div class="flex flex--row flex--center-y gap--xsmall">
+    <img class="image--adaptive image--xsmall" alt="" src="https://trmnl.com/images/plugins/weather/wi-time-4.svg">
+    <span class="value value--small">Calendar</span>
   </div>
   {% if days and days.size > 0 %}
     {% for day in days limit: 5 %}
       {% if day.is_today or day.is_tomorrow or day.events.size > 0 %}
-        <div class="bg--gray-10 rounded--medium p--1 flex flex--col gap--xsmall">
+        <div class="outline rounded--medium p--1 flex flex--col gap--xsmall">
           <span class="label {% if day.is_today %}text--yellow{% endif %}">{{ day.label }}</span>
           {% if day.events.size > 0 %}
             {% for event in day.events limit: 2 %}
-              <div class="item">
-                <div class="meta"></div>
-                <div class="content">
-                  <span class="description">{{ event.time_label }} · {{ event.title }}</span>
-                </div>
-              </div>
+              <span class="description">{{ event.time_label }} · {{ event.title }}</span>
             {% endfor %}
           {% else %}
             <span class="description">No events</span>
@@ -32,12 +22,7 @@
     {% endfor %}
   {% elsif events and events.size > 0 %}
     {% for event in events limit: 6 %}
-      <div class="item">
-        <div class="meta"></div>
-        <div class="content">
-          <span class="description">{{ event.day_label }} · {{ event.title }}</span>
-        </div>
-      </div>
+      <span class="description">{{ event.day_label }} · {{ event.title }}</span>
     {% endfor %}
   {% else %}
     <span class="description">—</span>
