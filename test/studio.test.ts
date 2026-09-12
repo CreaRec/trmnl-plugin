@@ -122,6 +122,8 @@ describe("studio routes", () => {
     expect(html).toMatch(/id="screen-body"/);
     expect(html).toMatch(/layout layout--col gap--medium/);
     expect(html).toMatch(/class="title_bar"/);
+    expect(html).toMatch(/class="trmnl"/);
+    expect(html).toMatch(/screen--og/);
     expect(html).toMatch(/id="block-rail"/);
     expect(html).toMatch(/studio-rail/);
     expect(html).not.toMatch(/id="block-list"/);

@@ -268,10 +268,31 @@ body {
   margin-left: auto;
 }
 
-/* Exact OG screen — content uses TRMNL framework classes from plugins.css */
-.studio-screen {
-  width: var(--screen-w);
+/* Exact OG screen — prefer TRMNL .trmnl .screen vars; thin studio overrides only */
+.preview-frame .trmnl {
+  /* Contain framework transform/margin quirks from plugins.css */
+  overflow: hidden;
+  width: var(--screen-w, 800px);
   max-width: 100%;
+}
+
+.studio-screen {
+  /* Framework sets size via .trmnl .screen--og; keep a max for small viewports */
+  max-width: 100%;
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* When framework CSS loaded, do not fight its layout/title_bar sizing */
+html.has-trmnl-css .studio-screen {
+  /* plugins.css already pads .trmnl .screen */
+  overflow: hidden;
+}
+
+/* Fallback path when CDN failed — approximate Liquid look */
+html.no-trmnl-css .studio-screen,
+html:not(.has-trmnl-css) .studio-screen.studio-fallback {
+  width: var(--screen-w);
   height: var(--screen-h);
   max-height: min(var(--screen-h), 70vh);
   margin: 0 auto;
@@ -280,27 +301,23 @@ body {
   color: #000;
   padding: 12px 14px;
   border: 1px solid #222;
-  position: relative;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  font-family: Georgia, "Times New Roman", serif;
 }
 
-.studio-screen > .layout {
+html.no-trmnl-css .studio-screen > .layout,
+html:not(.has-trmnl-css) .studio-fallback > .layout {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
 }
 
-.studio-screen > .title_bar {
+html.no-trmnl-css .studio-screen > .title_bar,
+html:not(.has-trmnl-css) .studio-fallback > .title_bar {
   flex: 0 0 auto;
   margin-top: auto;
-}
-
-/* Fallback when TRMNL framework CSS did not load */
-html.no-trmnl-css .studio-screen,
-html:not(.has-trmnl-css) .studio-screen.studio-fallback {
-  font-family: Georgia, "Times New Roman", serif;
 }
 
 html.no-trmnl-css .studio-screen .outline,
@@ -468,7 +485,12 @@ html:not(.has-trmnl-css) .studio-fallback .title_bar .instance {
     flex: 1 1 10rem;
   }
 
-  .studio-screen {
+  .preview-frame .trmnl {
+    width: 100%;
+  }
+
+  html.no-trmnl-css .studio-screen,
+  html:not(.has-trmnl-css) .studio-fallback {
     height: auto;
     min-height: 360px;
     max-height: none;
