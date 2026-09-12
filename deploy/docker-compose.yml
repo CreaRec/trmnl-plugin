@@ -1,0 +1,18 @@
+# Deploy copy for Debian host (/home/crearec/trmnl-plugin).
+# Bind to loopback — nginx on crearec.app proxies /trmnl → :8799.
+services:
+  trmnl-plugin:
+    image: ghcr.io/crearec/trmnl-plugin:main
+    container_name: trmnl-plugin
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8799:8799"
+    environment:
+      - PORT=8799
+      - HOST=0.0.0.0
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8799/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

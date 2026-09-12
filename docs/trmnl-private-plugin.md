@@ -73,12 +73,19 @@ Same endpoint supports `GET` to inspect current merge variables.
 - Use `text--red` / `text--yellow` (and matching `bg--*` if needed) sparingly for status — black/gray for body text.
 - Slow refresh → fewer panels, larger type, short labels.
 
-## Wiring a future polling URL
+## Wiring the polling URL
 
-1. Serve JSON matching [`examples/sample-payload.json`](../examples/sample-payload.json).
-2. Set Private Plugin → Polling → that URL.
+Production poller (after deploy):
+
+```text
+https://crearec.app/trmnl
+```
+
+1. The Node service in `src/` serves JSON matching [`examples/sample-payload.json`](../examples/sample-payload.json); `updated_at` is set to now on every request.
+2. Set Private Plugin → Polling → `https://crearec.app/trmnl`.
 3. Keep field names stable so `markup/*.liquid` does not churn.
 4. Auth via polling headers / form fields if needed — never commit secrets here.
+5. Nginx snippet: [`deploy/nginx-trmnl.conf`](../deploy/nginx-trmnl.conf).
 
 Whitelist TRMNL server IPs if you lock down the API: https://trmnl.com/api/ips
 
