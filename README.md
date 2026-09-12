@@ -18,6 +18,21 @@ Use that as the Private Plugin **Polling** URL (`GET`). Each response refreshes 
 https://crearec.app/trmnl/health
 ```
 
+### Studio (layout playground)
+
+Web UI to drag dashboard blocks and preview the fridge layout (~800×480 BWRY):
+
+```text
+https://crearec.app/trmnl/studio
+```
+
+- **localStorage** (`trmnl-studio-layout-v1`) — instant client-side persistence while editing.
+- **Server sync** — `GET`/`PUT`/`POST` `https://crearec.app/trmnl/studio/layout` writes JSON under `STUDIO_LAYOUT_PATH` (compose volume `./data`). Browser localStorage alone is not readable by agents; sync so Senior Pomidor (or any agent) can later `GET` the layout and update Liquid in the repo.
+
+Buttons: Save locally · Sync to server · Load from server · Reset default. Drop auto-saves locally; optional debounced auto-sync to the server.
+
+Local: `http://127.0.0.1:8799/studio/`.
+
 Local / Docker defaults: `HOST=0.0.0.0` `PORT=8799` → `http://127.0.0.1:8799/` and `/health`. Alias: `GET /poll`.
 
 ## Folder layout
@@ -27,13 +42,14 @@ Local / Docker defaults: `HOST=0.0.0.0` `PORT=8799` → `http://127.0.0.1:8799/`
 ├── README.md
 ├── .env.example                  # Placeholder env only (never commit real ICS URL)
 ├── src/                          # Node 22 + TypeScript poll server
+├── studio/                       # Layout playground UI (HTML/CSS/JS)
 ├── test/
 │   └── fixtures/sample.ics       # Tiny synthetic ICS (no iCloud URL)
 ├── Dockerfile
-├── docker-compose.yml
+├── docker-compose.yml            # Includes ./data volume for Studio layout
 ├── deploy/
-│   ├── docker-compose.yml        # Loopback bind + env_file: .env
-│   └── nginx-trmnl.conf
+│   ├── docker-compose.yml        # Loopback bind + env_file + ./data volume
+│   └── nginx-trmnl.conf          # /trmnl, /health, /poll, /studio
 ├── docs/
 │   └── trmnl-private-plugin.md
 ├── examples/
@@ -58,6 +74,7 @@ Copy `.env.example` → `.env` (gitignored). On the Debian host, create `/home/c
 | `WEATHER_TZ` | `America/Chicago` | Timezone for weather + calendar window + waste |
 | `PORT` | `8799` | Listen port |
 | `HOST` | `0.0.0.0` | Listen host |
+| `STUDIO_LAYOUT_PATH` | `./data/studio-layout.json` | Server-side Studio layout JSON (compose: `/app/data/studio-layout.json`) |
 
 ICS is cached in memory ~10 minutes; weather ~20 minutes.
 
@@ -122,6 +139,8 @@ npm start
 # or: npm run dev
 curl -sS http://127.0.0.1:8799/ | jq .
 curl -sS http://127.0.0.1:8799/health
+curl -sS http://127.0.0.1:8799/studio/layout | jq .
+# open http://127.0.0.1:8799/studio/
 ```
 
 Docker:
@@ -138,16 +157,22 @@ CI on `main` publishes `ghcr.io/crearec/trmnl-plugin:main` (+ `sha-*`) and SSH-d
 Manual:
 
 1. Copy `deploy/nginx-trmnl.conf` into `/etc/nginx/snippets/` and `include` it from the crearec.app site.
+   **Debian must update this snippet and reload nginx after deploy** (`sudo nginx -t && sudo systemctl reload nginx`) so `/trmnl/studio` is routed.
 2. Place `deploy/docker-compose.yml` at `/home/crearec/trmnl-plugin/docker-compose.yml`.
 3. Ensure `/home/crearec/trmnl-plugin/.env` exists (`env_file: .env` in compose).
-4. `docker compose pull && docker compose up -d`
-5. `curl -sS https://crearec.app/trmnl/health`
+4. Ensure `./data` exists next to compose (Studio layout volume) — `mkdir -p data`.
+5. `docker compose pull && docker compose up -d`
+6. `curl -sS https://crearec.app/trmnl/health`
+7. `curl -sS https://crearec.app/trmnl/studio/layout`
 
 | Path | Backend |
 | --- | --- |
 | `/trmnl` | `http://127.0.0.1:8799/` |
 | `/trmnl/` | 301 → `/trmnl` |
 | `/trmnl/health` | `http://127.0.0.1:8799/health` |
+| `/trmnl/poll` | `http://127.0.0.1:8799/poll` |
+| `/trmnl/studio` | 301 → `/trmnl/studio/` |
+| `/trmnl/studio/` | `http://127.0.0.1:8799/studio/` (UI, assets, `/layout` API) |
 
 ## BWRY notes
 

@@ -17,3 +17,6 @@ coverage/
 !.env.example
 *.pem
 secrets/
+
+# Runtime data (Studio layout JSON, etc.)
+data/

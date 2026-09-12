@@ -11,6 +11,9 @@ services:
     environment:
       - PORT=8799
       - HOST=0.0.0.0
+      - STUDIO_LAYOUT_PATH=/app/data/studio-layout.json
+    volumes:
+      - ./data:/app/data
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8799/health"]
       interval: 30s
