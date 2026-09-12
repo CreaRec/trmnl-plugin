@@ -38,8 +38,9 @@ describe("calendar ICS parsing", () => {
 
     expect(days).toHaveLength(7);
     expect(days[0]!.is_today).toBe(true);
-    expect(days[0]!.label).toBe("Today");
+    expect(days[0]!.label).toBe("Today · 9/13");
     expect(days[1]!.is_tomorrow).toBe(true);
+    expect(days[1]!.label).toBe("Tomorrow · 9/14");
 
     const titles = events.map((e) => e.title);
     expect(titles).toContain("Farmers market");

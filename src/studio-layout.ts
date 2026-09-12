@@ -22,16 +22,26 @@ export const MIN_BLOCK_H = 2;
 export const BLOCK_IDS = [
   "weather_today",
   "weather_tomorrow",
-  "status",
+  "battery",
+  "trash",
   "calendar",
 ] as const;
 
 export type BlockId = (typeof BLOCK_IDS)[number];
 
-/** Per-block mins — status is icon-only and fits a single cell. */
+/** Legacy single status strip — migrated to battery + trash. */
+const LEGACY_STATUS_ID = "status";
+
+/** Per-block mins — battery/trash are fixed 1×1 icon cells. */
 export function minSizeFor(id: BlockId): { w: number; h: number } {
-  if (id === "status") return { w: 1, h: 1 };
+  if (id === "battery" || id === "trash") return { w: 1, h: 1 };
   return { w: MIN_BLOCK_W, h: MIN_BLOCK_H };
+}
+
+/** Fixed size lock (no free resize). */
+export function fixedSizeFor(id: BlockId): { w: number; h: number } | null {
+  if (id === "battery" || id === "trash") return { w: 1, h: 1 };
+  return null;
 }
 
 /** v2 cell rectangle (0-based column/row, inclusive span). */
@@ -52,12 +62,13 @@ export type StudioLayout = {
 
 const BLOCK_ID_SET = new Set<string>(BLOCK_IDS);
 
-/** Default v2 placement: weather top halves, status thin strip, calendar rest. */
+/** Default v2 placement: weather top halves, battery+trash 1×1, calendar rest. */
 export function defaultBlockRects(): LayoutBlock[] {
   return [
     { id: "weather_today", x: 0, y: 0, w: 6, h: 3 },
     { id: "weather_tomorrow", x: 6, y: 0, w: 6, h: 3 },
-    { id: "status", x: 0, y: 3, w: 12, h: 1 },
+    { id: "battery", x: 0, y: 3, w: 1, h: 1 },
+    { id: "trash", x: 1, y: 3, w: 1, h: 1 },
     { id: "calendar", x: 0, y: 4, w: 12, h: 4 },
   ];
 }
@@ -116,9 +127,58 @@ export function clampBlockRect(
 }
 
 /**
+ * Replace legacy `status` with `battery` + `trash` at sensible 1×1 positions.
+ * If battery/trash already exist, status is dropped.
+ */
+export function expandLegacyStatusBlocks(
+  blocks: Array<Record<string, unknown>>,
+): Array<Record<string, unknown>> {
+  const hasBattery = blocks.some((b) => b.id === "battery");
+  const hasTrash = blocks.some((b) => b.id === "trash");
+  const out: Array<Record<string, unknown>> = [];
+
+  for (const block of blocks) {
+    if (block.id !== LEGACY_STATUS_ID) {
+      out.push(block);
+      continue;
+    }
+    if (hasBattery && hasTrash) continue;
+
+    const hasCells =
+      isInt(block.x) || isInt(block.y) || isInt(block.w) || isInt(block.h);
+    if (hasCells && isInt(block.x) && isInt(block.y)) {
+      const bx = clampInt(block.x, 0, GRID_COLS - 1);
+      const by = clampInt(block.y, 0, GRID_ROWS - 1);
+      let tx = bx + 1;
+      if (tx >= GRID_COLS) tx = Math.max(0, bx - 1);
+      if (!hasBattery) {
+        out.push({ id: "battery", x: bx, y: by, w: 1, h: 1 });
+      }
+      if (!hasTrash) {
+        out.push({ id: "trash", x: tx, y: by, w: 1, h: 1 });
+      }
+    } else {
+      // v1 width-only — defaults fill geometry later
+      if (!hasBattery) {
+        out.push({
+          id: "battery",
+          ...(block.width != null ? { width: block.width } : {}),
+        });
+      }
+      if (!hasTrash) {
+        out.push({
+          id: "trash",
+          ...(block.width != null ? { width: block.width } : {}),
+        });
+      }
+    }
+  }
+  return out;
+}
+
+/**
  * Map legacy v1 `{ id, width: half|full }` order into default v2 cell rects.
- * Weather halves stay top row; status thin full width; calendar fills the rest.
- * Order from v1 is preserved only for tie-breaking when ids match defaults.
+ * Weather halves stay top row; battery+trash 1×1; calendar fills the rest.
  */
 export function migrateV1BlocksToV2(
   v1Blocks: Array<{ id: string; width?: string }>,
@@ -127,7 +187,6 @@ export function migrateV1BlocksToV2(
   const byId = new Map<BlockId, LayoutBlock>(
     defaults.map((b) => [b.id, { ...b }]),
   );
-  // Keep known ids; ignore unknown. Default rects already encode half/full geometry.
   const ordered: LayoutBlock[] = [];
   const seen = new Set<BlockId>();
   for (const b of v1Blocks) {
@@ -150,20 +209,20 @@ function parseCellBlock(
   const hasCells =
     isInt(block.x) || isInt(block.y) || isInt(block.w) || isInt(block.h);
   if (!hasCells) {
-    // Legacy width-only block — take default rect for this id
     const def = defaultBlockRects().find((b) => b.id === id)!;
     return { ...def };
   }
   if (!isInt(block.x) || !isInt(block.y) || !isInt(block.w) || !isInt(block.h)) {
     throw new Error(`block ${id} requires integer x,y,w,h`);
   }
+  const fixed = fixedSizeFor(id);
   const mins = minSizeFor(id);
   const clamped = clampBlockRect(
     {
       x: block.x,
       y: block.y,
-      w: block.w,
-      h: block.h,
+      w: fixed ? fixed.w : block.w,
+      h: fixed ? fixed.h : block.h,
     },
     GRID_COLS,
     GRID_ROWS,
@@ -188,6 +247,7 @@ function assertNoOverlap(blocks: LayoutBlock[]): void {
 /**
  * Validate and normalize layout to v2.
  * Accepts v1 half/full payloads and upgrades them to cell rects.
+ * Migrates legacy `status` → `battery` + `trash`.
  * Writes always use version 2 + grid metadata.
  */
 export function validateStudioLayout(raw: unknown): StudioLayout {
@@ -202,14 +262,21 @@ export function validateStudioLayout(raw: unknown): StudioLayout {
     throw new Error("layout.blocks must not be empty");
   }
 
+  const expanded = expandLegacyStatusBlocks(
+    obj.blocks.map((item) => {
+      if (item == null || typeof item !== "object") {
+        throw new Error("each block must be an object");
+      }
+      return item as Record<string, unknown>;
+    }),
+  );
+
   const incomingVersion =
     typeof obj.version === "number" && Number.isFinite(obj.version)
       ? Math.trunc(obj.version)
       : 1;
 
-  const looksLikeV1 = obj.blocks.every((item) => {
-    if (item == null || typeof item !== "object") return false;
-    const b = item as Record<string, unknown>;
+  const looksLikeV1 = expanded.every((b) => {
     const hasCells =
       isInt(b.x) || isInt(b.y) || isInt(b.w) || isInt(b.h);
     return !hasCells;
@@ -220,11 +287,7 @@ export function validateStudioLayout(raw: unknown): StudioLayout {
   if (incomingVersion <= 1 || looksLikeV1) {
     const v1: Array<{ id: string; width?: string }> = [];
     const seen = new Set<string>();
-    for (const item of obj.blocks) {
-      if (item == null || typeof item !== "object") {
-        throw new Error("each block must be an object");
-      }
-      const block = item as Record<string, unknown>;
+    for (const block of expanded) {
       const id = block.id;
       if (typeof id !== "string" || !BLOCK_ID_SET.has(id)) {
         throw new Error(`invalid block id: ${String(id)}`);
@@ -250,11 +313,7 @@ export function validateStudioLayout(raw: unknown): StudioLayout {
   } else {
     const seen = new Set<string>();
     blocks = [];
-    for (const item of obj.blocks) {
-      if (item == null || typeof item !== "object") {
-        throw new Error("each block must be an object");
-      }
-      const block = item as Record<string, unknown>;
+    for (const block of expanded) {
       const id = block.id;
       if (typeof id !== "string" || !BLOCK_ID_SET.has(id)) {
         throw new Error(`invalid block id: ${String(id)}`);

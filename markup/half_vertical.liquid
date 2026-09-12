@@ -9,7 +9,7 @@
     {% for day in days limit: 5 %}
       {% if day.is_today or day.is_tomorrow or day.events.size > 0 %}
         <div class="outline rounded--medium p--1 flex flex--col gap--xsmall">
-          <span class="label {% if day.is_today %}text--yellow{% endif %}">{{ day.label }}</span>
+          <span class="label {% if day.is_today %}text--red{% endif %}">{{ day.label }}</span>
           {% if day.events.size > 0 %}
             {% for event in day.events limit: 2 %}
               <span class="description">{{ event.time_label }} · {{ event.title }}</span>

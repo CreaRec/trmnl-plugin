@@ -69,9 +69,10 @@ function dayLabelFor(
   tomorrowKey: string,
   zone: string,
 ): string {
-  if (dayKey === todayKey) return "Today";
-  if (dayKey === tomorrowKey) return "Tomorrow";
   const dt = DateTime.fromISO(dayKey, { zone });
+  const datePart = dt.toFormat("M/d");
+  if (dayKey === todayKey) return `Today · ${datePart}`;
+  if (dayKey === tomorrowKey) return `Tomorrow · ${datePart}`;
   return dt.toFormat("ccc M/d");
 }
 
