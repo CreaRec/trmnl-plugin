@@ -20,20 +20,44 @@ https://crearec.app/trmnl/health
 
 ### Studio (layout playground) — Tailscale only
 
-Web UI to drag dashboard blocks and preview the fridge layout (~800×480 BWRY). **Not** exposed on crearec.app; use Tailscale:
+Web UI to place dashboard blocks on a fine **12×8 cell grid** over the fridge screen (~800×480 BWRY). Drag to move, SE corner to resize (snap to cells). **Collision rule:** prevent overlap — blocks cannot share cells. **Not** exposed on crearec.app; use Tailscale:
 
 ```text
 http://100.118.169.52:8799/studio/
 ```
 
-Public poll is tokenized at `https://crearec.app/trmnl/<uuid>` (TRMNL Polling). Studio layout API is on the same Tailscale host (`/studio/layout`).
+Public poll is tokenized at `https://crearec.app/trmnl/<uuid>` (TRMNL Polling). Studio APIs stay on the same Tailscale host:
 
-- **localStorage** (`trmnl-studio-layout-v1`) — instant client-side persistence while editing.
-- **Server sync** — `GET`/`PUT`/`POST` `http://100.118.169.52:8799/studio/layout` writes JSON under `STUDIO_LAYOUT_PATH` (compose volume `./data`). Browser localStorage alone is not readable by agents; sync so Senior Pomidor (or any agent) can later `GET` the layout and update Liquid in the repo.
-- **Device source of truth** — `markup/full.liquid` is what TRMNL renders on the fridge. Studio’s 800×480 screen body mirrors that Liquid with the same framework classes (`layout`, `grid--cols-2`, `outline`, `value--xlarge`, `title_bar`, …). Reorder chrome (↑↓⠿) lives in a **side rail** outside the screen so cards match the Markup Editor preview.
+| Endpoint | Purpose |
+| --- | --- |
+| `GET`/`PUT`/`POST` `/studio/layout` | Layout JSON (v2 cell rects) under `STUDIO_LAYOUT_PATH` |
+| `GET` `/studio/liquid` | Paste-ready Full Liquid (CSS grid placements) |
+| `GET` `/studio/poll` | Preview poll JSON (no token; Tailscale-gated) |
+
+**Layout schema v2** (writes always upgrade to this):
+
+```json
+{
+  "version": 2,
+  "updated_at": "…",
+  "grid": { "cols": 12, "rows": 8 },
+  "blocks": [
+    { "id": "weather_today", "x": 0, "y": 0, "w": 6, "h": 3 },
+    { "id": "weather_tomorrow", "x": 6, "y": 0, "w": 6, "h": 3 },
+    { "id": "status", "x": 0, "y": 3, "w": 12, "h": 1 },
+    { "id": "calendar", "x": 0, "y": 4, "w": 12, "h": 4 }
+  ]
+}
+```
+
+- Cell units are integers; `x`/`y` are 0-based; `w`/`h` are spans (min `w≥2`, `h≥2` except status may be `h≥1`).
+- Legacy v1 `{ id, width: "half"|"full" }` is accepted on read and migrated to the default rects above.
+- **localStorage** (`trmnl-studio-layout-v2`) — instant client-side persistence while editing (v1 key is migrated on load).
+- **Server sync** — browser localStorage alone is not readable by agents; sync so Senior Pomidor (or any agent) can `GET` the layout or `/studio/liquid`.
+- **Export flow (device):** Studio → arrange blocks → Sync → **Export Liquid** → paste into TRMNL Markup → **Full** → Force Refresh. Markup Editor / Studio preview may differ from the device; exported Liquid (CSS `grid-template` + `grid-column`/`grid-row`, no `studio-*` classes) is the device source of truth. Repo `markup/full.liquid` remains the default checked-in Full layout.
 - **Preview-only device vars** — `GET /studio/poll` merges `trmnl.device.percent_charged: 100` and `trmnl.plugin_settings.instance_name: "My Plugin"` so Studio can show the battery pill and title_bar instance like the Markup Editor. Authorized `/poll` never includes these (TRMNL injects them on device).
 
-Buttons: Save locally · Sync to server · Load from server · Reset default. Drop auto-saves locally; optional debounced auto-sync to the server.
+Buttons: Save locally · Sync to server · Load from server · Export Liquid · Reset default · Refresh poll. Drag/resize auto-saves locally; optional debounced auto-sync to the server.
 
 Local (without Tailscale bind): `http://127.0.0.1:8799/studio/`.
 
@@ -119,11 +143,11 @@ Waste is **not** injected into the calendar.
 1. Plugins → **Private Plugin** → name e.g. `CreaFridge`.
 2. Strategy → **Polling** (recommended).
 3. Save, then **Edit Markup**.
-4. Paste from `markup/`:
-   - `full.liquid` → **Full** (outlined cards: Weather · Today | Tomorrow, Status · Battery + Waste, Calendar · 7 days listing every day)
+4. Paste from `markup/` (or Studio export):
+   - `full.liquid` → **Full** (default equal weather halves + status + calendar), **or** paste Liquid from Studio **Export Liquid** / `GET /studio/liquid` for a freeform 12×8 CSS grid
    - optional half / quadrant tabs
-   - `shared.liquid` → **Shared**
-5. Force Refresh; preview as **TRMNL OG (B/W/R/Y)**. Re-paste Full after markup changes in git — Studio sync does not push Liquid.
+   - `shared.liquid` → **Shared** (Studio export embeds its own `<style>` in Full; Shared stays light)
+5. Force Refresh; preview as **TRMNL OG (B/W/R/Y)**. Re-paste Full after markup changes or after exporting a new Studio layout — Studio sync alone does not push Liquid to TRMNL.
 
 Official guide: [Private Plugins](https://help.trmnl.com/en/articles/9510536-private-plugins)
 
@@ -152,6 +176,7 @@ TOKEN=$(grep '^TRMNL_POLL_TOKEN=' .env | cut -d= -f2-)
 curl -sS "http://127.0.0.1:8799/poll/${TOKEN}" | jq .
 curl -sS http://127.0.0.1:8799/health
 curl -sS http://127.0.0.1:8799/studio/layout | jq .
+curl -sS http://127.0.0.1:8799/studio/liquid | head
 # open http://127.0.0.1:8799/studio/
 ```
 

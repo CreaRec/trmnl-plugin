@@ -35,9 +35,11 @@
         <span class="studio-brand__sub">Studio</span>
       </div>
       <p class="studio-lede">
-        Preview matches TRMNL Full markup (<code>markup/full.liquid</code>) —
-        framework classes inside the 800×480 screen. Reorder via the side rail;
-        order saves in localStorage and can sync to the server.
+        Freeform <strong>12×8</strong> cell grid on the 800×480 screen — drag to
+        move, SE corner to resize (snap to cells; no overlap). Sync layout to the
+        server, then <strong>Export Liquid</strong> and paste into TRMNL Markup →
+        Full. Preview may differ from the device; exported Liquid is the device
+        source of truth.
       </p>
       <div class="studio-actions" role="toolbar" aria-label="Layout actions">
         <button type="button" id="btn-save-local">Save locally</button>
@@ -45,6 +47,7 @@
           Sync to server
         </button>
         <button type="button" id="btn-load-server">Load from server</button>
+        <button type="button" id="btn-export-liquid">Export Liquid</button>
         <button type="button" id="btn-reset">Reset default</button>
         <button type="button" id="btn-refresh-poll">Refresh poll</button>
       </div>
@@ -54,35 +57,28 @@
 
     <main class="studio-main">
       <section class="preview-wrap" aria-label="TRMNL OG preview">
-        <div class="preview-stage">
-          <aside
-            id="block-rail"
-            class="studio-rail"
-            aria-label="Reorder blocks"
-          ></aside>
-          <div class="preview-frame">
-            <!-- .trmnl + .view--full required for plugins.css vars and column layout -->
-            <div class="trmnl">
-              <div
-                id="screen"
-                class="screen screen--og screen--color-4bwry studio-screen"
-                data-studio-screen
-              >
-                <div class="view view--full">
-                  <div
-                    id="screen-body"
-                    class="layout layout--col gap--medium"
-                    aria-label="Screen content"
-                  ></div>
-                  <div id="title-bar" class="title_bar">
-                    <img
-                      class="image image--adaptive"
-                      alt=""
-                      src="https://trmnl.com/images/plugins/weather--render.svg"
-                    />
-                    <span class="title" id="title-bar-title">CreaFridge</span>
-                    <span class="instance" id="title-bar-instance">My Plugin</span>
-                  </div>
+        <div class="preview-frame">
+          <!-- .trmnl + .view--full required for plugins.css vars and column layout -->
+          <div class="trmnl">
+            <div
+              id="screen"
+              class="screen screen--og screen--color-4bwry studio-screen"
+              data-studio-screen
+            >
+              <div class="view view--full">
+                <div
+                  id="screen-body"
+                  class="creafridge-studio-grid"
+                  aria-label="Freeform grid"
+                ></div>
+                <div id="title-bar" class="title_bar">
+                  <img
+                    class="image image--adaptive"
+                    alt=""
+                    src="https://trmnl.com/images/plugins/weather--render.svg"
+                  />
+                  <span class="title" id="title-bar-title">CreaFridge</span>
+                  <span class="instance" id="title-bar-instance">My Plugin</span>
                 </div>
               </div>
             </div>

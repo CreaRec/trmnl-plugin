@@ -15,6 +15,7 @@ import {
   validateStudioLayout,
   writeStudioLayout,
 } from "./studio-layout.js";
+import { renderStudioLiquid } from "./studio-liquid.js";
 
 const JSON_HEADERS = {
   "Content-Type": "application/json; charset=utf-8",
@@ -224,6 +225,30 @@ export async function handleRequest(
   // Studio layout API
   if (path === "/studio/layout") {
     await handleStudioLayout(req, res, method);
+    return;
+  }
+
+  // Paste-ready Full Liquid from current server layout (Tailscale only)
+  if (path === "/studio/liquid") {
+    if (method !== "GET" && method !== "HEAD") {
+      sendJson(res, 405, { error: "method_not_allowed" });
+      return;
+    }
+    const layout = await readStudioLayout(resolveStudioLayoutPath());
+    const liquid = renderStudioLiquid(layout);
+    const headers = {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "no-store",
+      ...CORS_HEADERS,
+      "Content-Length": Buffer.byteLength(liquid),
+    };
+    if (method === "HEAD") {
+      res.writeHead(200, headers);
+      res.end();
+      return;
+    }
+    res.writeHead(200, headers);
+    res.end(liquid);
     return;
   }
 

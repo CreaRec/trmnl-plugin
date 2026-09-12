@@ -116,30 +116,33 @@ describe("studio routes", () => {
     }
   });
 
-  it("Studio HTML uses framework screen structure and side rail", async () => {
+  it("Studio HTML uses freeform grid and framework screen structure", async () => {
     const base = await listen();
     const html = await (await fetch(`${base}/studio/`)).text();
     expect(html).toMatch(/id="screen-body"/);
-    expect(html).toMatch(/layout layout--col gap--medium/);
+    expect(html).toMatch(/creafridge-studio-grid/);
     expect(html).toMatch(/class="title_bar"/);
     expect(html).toMatch(/class="trmnl"/);
     expect(html).toMatch(/screen--og/);
     expect(html).toMatch(/view view--full/);
-    expect(html).toMatch(/id="block-rail"/);
-    expect(html).toMatch(/studio-rail/);
+    expect(html).toMatch(/btn-export-liquid/);
+    expect(html).not.toMatch(/id="block-rail"/);
     expect(html).not.toMatch(/id="block-list"/);
 
     const js = await (await fetch(`${base}/studio/studio.js`)).text();
-    expect(js).toContain("grid grid--cols-2 gap--small");
+    expect(js).toContain("GRID_COLS = 12");
+    expect(js).toContain("GRID_ROWS = 8");
     expect(js).toContain("value value--xlarge");
     expect(js).toContain("renderTitleBar");
     expect(js).toContain("title-bar-instance");
     expect(js).toContain("Battery");
+    expect(js).toContain("data-resize");
+    expect(js).toContain("/liquid");
     expect(js).not.toContain("No waste today");
     expect(js).not.toContain("Battery (device var)");
     expect(js).not.toContain("studio-weather");
     expect(js).not.toContain("studio-cal-list");
-    expect(js).toContain("studio-rail");
+    expect(js).not.toContain("studio-rail");
   });
 
   it("GET /studio/layout returns default when file missing", async () => {
@@ -149,14 +152,17 @@ describe("studio routes", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       version: number;
-      blocks: { id: string }[];
+      grid: { cols: number; rows: number };
+      blocks: { id: string; x: number; y: number; w: number; h: number }[];
     };
     const def = defaultStudioLayout();
     expect(body.version).toBe(def.version);
+    expect(body.grid).toEqual({ cols: 12, rows: 8 });
     expect(body.blocks.map((b) => b.id)).toEqual(def.blocks.map((b) => b.id));
+    expect(body.blocks[0]).toMatchObject({ x: 0, y: 0, w: 6, h: 3 });
   });
 
-  it("PUT /studio/layout then GET roundtrips", async () => {
+  it("PUT v1 layout migrates to v2 cell rects on write", async () => {
     const file = await withTempLayoutPath();
     const base = await listen();
     const payload = {
@@ -175,26 +181,76 @@ describe("studio routes", () => {
     });
     expect(put.status).toBe(200);
     const saved = (await put.json()) as {
+      version: number;
       updated_at: string;
-      blocks: { id: string }[];
+      blocks: { id: string; x: number; w: number }[];
     };
+    expect(saved.version).toBe(2);
     expect(saved.blocks.map((b) => b.id)).toEqual([
       "calendar",
       "status",
       "weather_today",
       "weather_tomorrow",
     ]);
+    expect(saved.blocks.find((b) => b.id === "weather_today")).toMatchObject({
+      x: 0,
+      w: 6,
+    });
     expect(saved.updated_at).toBeTypeOf("string");
 
     const get = await fetch(`${base}/studio/layout`);
     expect(get.status).toBe(200);
-    const again = (await get.json()) as { blocks: { id: string }[] };
+    const again = (await get.json()) as { version: number; blocks: { id: string }[] };
+    expect(again.version).toBe(2);
     expect(again.blocks.map((b) => b.id)).toEqual(saved.blocks.map((b) => b.id));
 
     const onDisk = JSON.parse(await fs.readFile(file, "utf8")) as {
+      version: number;
       blocks: { id: string }[];
     };
+    expect(onDisk.version).toBe(2);
     expect(onDisk.blocks.map((b) => b.id)).toEqual(saved.blocks.map((b) => b.id));
+  });
+
+  it("PUT /studio/layout then GET roundtrips v2 cells", async () => {
+    const file = await withTempLayoutPath();
+    const base = await listen();
+    const payload = {
+      version: 2,
+      blocks: [
+        { id: "weather_today", x: 0, y: 0, w: 4, h: 3 },
+        { id: "weather_tomorrow", x: 4, y: 0, w: 4, h: 3 },
+        { id: "status", x: 8, y: 0, w: 4, h: 3 },
+        { id: "calendar", x: 0, y: 3, w: 12, h: 5 },
+      ],
+    };
+    const put = await fetch(`${base}/studio/layout`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    expect(put.status).toBe(200);
+    const saved = (await put.json()) as {
+      blocks: { id: string; x: number; w: number }[];
+    };
+    expect(saved.blocks.find((b) => b.id === "status")).toMatchObject({
+      x: 8,
+      w: 4,
+    });
+
+    const get = await fetch(`${base}/studio/layout`);
+    expect(get.status).toBe(200);
+    const again = (await get.json()) as {
+      blocks: { id: string; x: number }[];
+    };
+    expect(again.blocks.find((b) => b.id === "calendar")).toMatchObject({
+      x: 0,
+    });
+
+    const onDisk = JSON.parse(await fs.readFile(file, "utf8")) as {
+      version: number;
+    };
+    expect(onDisk.version).toBe(2);
   });
 
   it("POST /studio/layout works like PUT", async () => {
@@ -204,18 +260,33 @@ describe("studio routes", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        version: 1,
+        version: 2,
         blocks: [
-          { id: "status", width: "full" },
-          { id: "calendar", width: "full" },
-          { id: "weather_today", width: "half" },
-          { id: "weather_tomorrow", width: "half" },
+          { id: "status", x: 0, y: 0, w: 12, h: 1 },
+          { id: "calendar", x: 0, y: 1, w: 12, h: 4 },
+          { id: "weather_today", x: 0, y: 5, w: 6, h: 3 },
+          { id: "weather_tomorrow", x: 6, y: 5, w: 6, h: 3 },
         ],
       }),
     });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { blocks: { id: string }[] };
     expect(body.blocks[0]?.id).toBe("status");
+  });
+
+  it("GET /studio/liquid returns paste-ready Full with grid markers", async () => {
+    await withTempLayoutPath();
+    const base = await listen();
+    const res = await fetch(`${base}/studio/liquid`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toMatch(/text\/plain/);
+    const text = await res.text();
+    expect(text).toMatch(/creafridge-grid/);
+    expect(text).toMatch(/grid-template-columns:\s*repeat\(12/);
+    expect(text).toMatch(/grid-column:/);
+    expect(text).toMatch(/CreaFridge Studio/);
+    expect(text).not.toMatch(/studio-/);
+    expect(text).toMatch(/title_bar/);
   });
 
   it("rejects invalid layout body", async () => {
@@ -225,6 +296,25 @@ describe("studio routes", () => {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ version: 1, blocks: [{ id: "nope" }] }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects overlapping v2 layout", async () => {
+    await withTempLayoutPath();
+    const base = await listen();
+    const res = await fetch(`${base}/studio/layout`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        version: 2,
+        blocks: [
+          { id: "weather_today", x: 0, y: 0, w: 8, h: 3 },
+          { id: "weather_tomorrow", x: 4, y: 0, w: 6, h: 3 },
+          { id: "status", x: 0, y: 3, w: 12, h: 1 },
+          { id: "calendar", x: 0, y: 4, w: 12, h: 4 },
+        ],
+      }),
     });
     expect(res.status).toBe(400);
   });

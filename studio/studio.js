@@ -1,6 +1,13 @@
-// Layout playground. Screen body mirrors markup/full.liquid (TRMNL framework
-// classes). DnD chrome lives in the side rail — never inside the 800×480 cards.
-const STORAGE_KEY = "trmnl-studio-layout-v1";
+// Freeform 12×8 cell grid playground. Block bodies use TRMNL framework classes;
+// position/size come from layout v2 cell rects. Collision: prevent overlap.
+const STORAGE_KEY = "trmnl-studio-layout-v2";
+const STORAGE_KEY_V1 = "trmnl-studio-layout-v1";
+
+const GRID_COLS = 12;
+const GRID_ROWS = 8;
+const MIN_W = 2;
+const MIN_H = 2;
+
 const BLOCK_IDS = [
   "weather_today",
   "weather_tomorrow",
@@ -15,20 +22,58 @@ const LABELS = {
   calendar: "Calendar · 7 days",
 };
 
-/** @typedef {{ id: string, width?: "full" | "half" }} LayoutBlock */
-/** @typedef {{ version: number, updated_at: string, blocks: LayoutBlock[] }} StudioLayout */
+/** @typedef {{ id: string, x: number, y: number, w: number, h: number }} LayoutBlock */
+/** @typedef {{ version: number, updated_at: string, grid: { cols: number, rows: number }, blocks: LayoutBlock[] }} StudioLayout */
+
+function minSizeFor(id) {
+  if (id === "status") return { w: 2, h: 1 };
+  return { w: MIN_W, h: MIN_H };
+}
+
+function defaultBlockRects() {
+  return [
+    { id: "weather_today", x: 0, y: 0, w: 6, h: 3 },
+    { id: "weather_tomorrow", x: 6, y: 0, w: 6, h: 3 },
+    { id: "status", x: 0, y: 3, w: 12, h: 1 },
+    { id: "calendar", x: 0, y: 4, w: 12, h: 4 },
+  ];
+}
 
 function defaultLayout() {
   return {
-    version: 1,
+    version: 2,
     updated_at: new Date().toISOString(),
-    blocks: [
-      { id: "weather_today", width: "half" },
-      { id: "weather_tomorrow", width: "half" },
-      { id: "status", width: "full" },
-      { id: "calendar", width: "full" },
-    ],
+    grid: { cols: GRID_COLS, rows: GRID_ROWS },
+    blocks: defaultBlockRects(),
   };
+}
+
+function clampInt(n, min, max) {
+  return Math.min(max, Math.max(min, Math.trunc(n)));
+}
+
+function clampRect(raw, id) {
+  const mins = minSizeFor(id);
+  const w = clampInt(raw.w, mins.w, GRID_COLS);
+  const h = clampInt(raw.h, mins.h, GRID_ROWS);
+  const x = clampInt(raw.x, 0, Math.max(0, GRID_COLS - w));
+  const y = clampInt(raw.y, 0, Math.max(0, GRID_ROWS - h));
+  return { x, y, w, h };
+}
+
+function rectsOverlap(a, b) {
+  return !(
+    a.x + a.w <= b.x ||
+    b.x + b.w <= a.x ||
+    a.y + a.h <= b.y ||
+    b.y + b.h <= a.y
+  );
+}
+
+function wouldOverlap(blocks, candidate, skipId) {
+  return blocks.some(
+    (b) => b.id !== skipId && rectsOverlap(candidate, b),
+  );
 }
 
 function studioRootPath() {
@@ -46,6 +91,10 @@ function layoutUrl() {
   return `${studioRootPath()}/layout`;
 }
 
+function liquidUrl() {
+  return `${studioRootPath()}/liquid`;
+}
+
 function setStatus(message, tone = "") {
   const el = document.getElementById("studio-status");
   if (!el) return;
@@ -54,34 +103,12 @@ function setStatus(message, tone = "") {
   else delete el.dataset.tone;
 }
 
-function normalizeLayout(raw) {
-  const base = defaultLayout();
-  if (!raw || typeof raw !== "object" || !Array.isArray(raw.blocks)) {
-    return base;
-  }
-  const byId = new Map();
-  for (const id of BLOCK_IDS) {
-    byId.set(id, {
-      id,
-      width: id.startsWith("weather_") ? "half" : "full",
-    });
-  }
-  for (const b of raw.blocks) {
-    if (b && typeof b.id === "string" && BLOCK_IDS.includes(b.id)) {
-      byId.set(b.id, {
-        id: b.id,
-        width:
-          b.width === "half" || b.width === "full"
-            ? b.width
-            : b.id.startsWith("weather_")
-              ? "half"
-              : "full",
-      });
-    }
-  }
+function migrateV1Blocks(v1Blocks) {
+  const defaults = defaultBlockRects();
+  const byId = new Map(defaults.map((b) => [b.id, { ...b }]));
   const ordered = [];
   const seen = new Set();
-  for (const b of raw.blocks) {
+  for (const b of v1Blocks) {
     if (b && BLOCK_IDS.includes(b.id) && !seen.has(b.id)) {
       ordered.push(byId.get(b.id));
       seen.add(b.id);
@@ -90,16 +117,73 @@ function normalizeLayout(raw) {
   for (const id of BLOCK_IDS) {
     if (!seen.has(id)) ordered.push(byId.get(id));
   }
+  return ordered;
+}
+
+function normalizeLayout(raw) {
+  const base = defaultLayout();
+  if (!raw || typeof raw !== "object" || !Array.isArray(raw.blocks)) {
+    return base;
+  }
+
+  const looksLikeV1 = raw.blocks.every((b) => {
+    if (!b || typeof b !== "object") return true;
+    return b.x == null && b.y == null && b.w == null && b.h == null;
+  });
+
+  let blocks;
+  if (raw.version <= 1 || looksLikeV1) {
+    blocks = migrateV1Blocks(raw.blocks);
+  } else {
+    const byId = new Map();
+    for (const id of BLOCK_IDS) {
+      byId.set(id, { ...defaultBlockRects().find((b) => b.id === id) });
+    }
+    for (const b of raw.blocks) {
+      if (b && typeof b.id === "string" && BLOCK_IDS.includes(b.id)) {
+        const rect = clampRect(
+          {
+            x: Number(b.x) || 0,
+            y: Number(b.y) || 0,
+            w: Number(b.w) || MIN_W,
+            h: Number(b.h) || MIN_H,
+          },
+          b.id,
+        );
+        byId.set(b.id, { id: b.id, ...rect });
+      }
+    }
+    blocks = BLOCK_IDS.map((id) => byId.get(id));
+    // If overlaps after clamp, fall back to defaults
+    let overlap = false;
+    for (let i = 0; i < blocks.length && !overlap; i++) {
+      for (let j = i + 1; j < blocks.length; j++) {
+        if (rectsOverlap(blocks[i], blocks[j])) {
+          overlap = true;
+          break;
+        }
+      }
+    }
+    if (overlap) blocks = defaultBlockRects();
+  }
+
   return {
-    version: typeof raw.version === "number" ? raw.version : 1,
-    updated_at: new Date().toISOString(),
-    blocks: ordered,
+    version: 2,
+    updated_at:
+      typeof raw.updated_at === "string"
+        ? raw.updated_at
+        : new Date().toISOString(),
+    grid: { cols: GRID_COLS, rows: GRID_ROWS },
+    blocks,
   };
 }
 
 function loadLocal() {
   try {
-    const text = localStorage.getItem(STORAGE_KEY);
+    let text = localStorage.getItem(STORAGE_KEY);
+    if (!text) {
+      text = localStorage.getItem(STORAGE_KEY_V1);
+    }
     if (!text) return defaultLayout();
     return normalizeLayout(JSON.parse(text));
   } catch {
@@ -117,11 +201,12 @@ function saveLocal(layout) {
   return next;
 }
 
-/** @type {{ layout: StudioLayout, poll: any, dragId: string | null }} */
+/** @type {{ layout: StudioLayout, poll: any, selectedId: string | null, interaction: any }} */
 const state = {
   layout: loadLocal(),
   poll: null,
-  dragId: null,
+  selectedId: null,
+  interaction: null,
 };
 
 function esc(s) {
@@ -132,10 +217,6 @@ function esc(s) {
     .replace(/"/g, "&quot;");
 }
 
-/**
- * Weather card — matches markup/full.liquid weather col.
- * @param {{ preferHigh?: boolean }} opts preferHigh mirrors Liquid tomorrow fallbacks
- */
 function weatherCardHtml(day, label, opts = {}) {
   const preferHigh = Boolean(opts.preferHigh);
   const condition = day?.condition || "—";
@@ -155,7 +236,7 @@ function weatherCardHtml(day, label, opts = {}) {
       : "";
 
   return `
-    <div class="col outline rounded--medium p--2 flex flex--col gap--small">
+    <div class="outline rounded--medium p--2 flex flex--col gap--small studio-block__card">
       <span class="label">${esc(label)}</span>
       <div class="flex flex--row flex--center-y gap--medium">
         <img
@@ -171,11 +252,6 @@ function weatherCardHtml(day, label, opts = {}) {
     </div>`;
 }
 
-/**
- * Status card — Liquid parity:
- * battery pill only when trmnl.device.percent_charged is present;
- * waste pill only when waste.active (omit inactive waste).
- */
 function statusCardHtml(poll) {
   const waste = poll?.waste;
   const battery = poll?.trmnl?.device?.percent_charged;
@@ -201,7 +277,7 @@ function statusCardHtml(poll) {
   }
 
   return `
-    <div class="outline rounded--medium p--2 flex flex--col gap--small">
+    <div class="outline rounded--medium p--2 flex flex--col gap--small studio-block__card">
       <span class="label">${esc(LABELS.status)}</span>
       <div class="flex flex--row gap--small flex--center-y flex--wrap">
         ${pills.join("")}
@@ -209,7 +285,6 @@ function statusCardHtml(poll) {
     </div>`;
 }
 
-/** Calendar card — every day in days[]; events or "—". */
 function calendarCardHtml(poll) {
   const days = Array.isArray(poll?.days) ? poll.days : [];
   const events = Array.isArray(poll?.events) ? poll.events : [];
@@ -261,7 +336,7 @@ function calendarCardHtml(poll) {
   }
 
   return `
-    <div class="outline rounded--medium p--2 flex flex--col gap--small">
+    <div class="outline rounded--medium p--2 flex flex--col gap--small studio-block__card">
       <span class="label">${esc(LABELS.calendar)}</span>
       <div class="flex flex--col gap--xsmall">
         ${rows}
@@ -286,69 +361,9 @@ function blockCardHtml(block, poll) {
   }
 }
 
-/** Group consecutive half-width blocks into grid--cols-2 like Liquid. */
-function screenBodyHtml(blocks, poll) {
-  const parts = [];
-  let i = 0;
-  while (i < blocks.length) {
-    const cur = blocks[i];
-    const next = blocks[i + 1];
-    if (cur.width === "half" && next && next.width === "half") {
-      parts.push(`
-        <div class="grid grid--cols-2 gap--small">
-          ${blockCardHtml(cur, poll)}
-          ${blockCardHtml(next, poll)}
-        </div>`);
-      i += 2;
-    } else {
-      parts.push(blockCardHtml(cur, poll));
-      i += 1;
-    }
-  }
-  return parts.join("");
-}
-
-function railItemElement(block, index, total) {
-  const el = document.createElement("div");
-  el.className = "studio-rail__item";
-  el.dataset.blockId = block.id;
-  el.draggable = true;
-  el.innerHTML = `
-    <span class="studio-rail__label">${esc(LABELS[block.id] || block.id)}</span>
-    <div class="studio-rail__controls">
-      <button type="button" data-move="up" aria-label="Move up" ${index === 0 ? "disabled" : ""}>↑</button>
-      <button type="button" data-move="down" aria-label="Move down" ${index === total - 1 ? "disabled" : ""}>↓</button>
-      <span class="studio-rail__handle" aria-hidden="true">⠿</span>
-    </div>
-  `;
-  el.addEventListener("dragstart", onDragStart);
-  el.addEventListener("dragend", onDragEnd);
-  el.addEventListener("dragover", onDragOver);
-  el.addEventListener("dragleave", onDragLeave);
-  el.addEventListener("drop", onDrop);
-  el.querySelectorAll("[data-move]").forEach((btn) => {
-    btn.addEventListener("click", (ev) => {
-      ev.preventDefault();
-      ev.stopPropagation();
-      moveBlock(block.id, btn.getAttribute("data-move"));
-    });
-    btn.addEventListener("mousedown", (ev) => ev.stopPropagation());
-  });
-  return el;
-}
-
-function moveBlock(id, direction) {
-  const blocks = [...state.layout.blocks];
-  const idx = blocks.findIndex((b) => b.id === id);
-  if (idx < 0) return;
-  const target = direction === "up" ? idx - 1 : idx + 1;
-  if (target < 0 || target >= blocks.length) return;
-  const [moved] = blocks.splice(idx, 1);
-  blocks.splice(target, 0, moved);
-  state.layout = saveLocal({ ...state.layout, blocks });
-  render();
-  setStatus("Saved locally (auto)", "ok");
-  scheduleAutoSync();
+function applyBlockPlacement(el, block) {
+  el.style.gridColumn = `${block.x + 1} / span ${block.w}`;
+  el.style.gridRow = `${block.y + 1} / span ${block.h}`;
 }
 
 function renderTitleBar() {
@@ -368,16 +383,26 @@ function renderTitleBar() {
 function render() {
   const body = document.getElementById("screen-body");
   if (body) {
-    body.innerHTML = screenBodyHtml(state.layout.blocks, state.poll);
-  }
+    body.innerHTML = "";
+    body.style.gridTemplateColumns = `repeat(${GRID_COLS}, 1fr)`;
+    body.style.gridTemplateRows = `repeat(${GRID_ROWS}, 1fr)`;
 
-  const rail = document.getElementById("block-rail");
-  if (rail) {
-    rail.innerHTML = "";
-    const blocks = state.layout.blocks;
-    blocks.forEach((b, i) => {
-      rail.appendChild(railItemElement(b, i, blocks.length));
-    });
+    for (const block of state.layout.blocks) {
+      const wrap = document.createElement("div");
+      wrap.className = "studio-block";
+      wrap.dataset.blockId = block.id;
+      if (state.selectedId === block.id) wrap.classList.add("is-selected");
+      applyBlockPlacement(wrap, block);
+      wrap.innerHTML = `
+        ${blockCardHtml(block, state.poll)}
+        <button type="button" class="studio-block__resize" data-resize="se" aria-label="Resize ${esc(LABELS[block.id] || block.id)}"></button>
+      `;
+      wrap.addEventListener("pointerdown", onBlockPointerDown);
+      wrap
+        .querySelector("[data-resize]")
+        ?.addEventListener("pointerdown", onResizePointerDown);
+      body.appendChild(wrap);
+    }
   }
 
   renderTitleBar();
@@ -397,70 +422,156 @@ function render() {
   }
 }
 
-function onDragStart(ev) {
-  const el = /** @type {HTMLElement} */ (ev.currentTarget);
-  if (ev.target instanceof HTMLElement && ev.target.closest("[data-move]")) {
-    ev.preventDefault();
+function cellFromPoint(clientX, clientY) {
+  const body = document.getElementById("screen-body");
+  if (!body) return { x: 0, y: 0 };
+  const rect = body.getBoundingClientRect();
+  const relX = clientX - rect.left;
+  const relY = clientY - rect.top;
+  const cellW = rect.width / GRID_COLS;
+  const cellH = rect.height / GRID_ROWS;
+  return {
+    x: clampInt(Math.floor(relX / cellW), 0, GRID_COLS - 1),
+    y: clampInt(Math.floor(relY / cellH), 0, GRID_ROWS - 1),
+  };
+}
+
+function updateBlockRect(id, nextRect, { commit = false } = {}) {
+  const blocks = state.layout.blocks.map((b) => ({ ...b }));
+  const idx = blocks.findIndex((b) => b.id === id);
+  if (idx < 0) return false;
+  const clamped = { id, ...clampRect(nextRect, id) };
+  if (wouldOverlap(blocks, clamped, id)) {
+    return false;
+  }
+  blocks[idx] = clamped;
+  state.layout = { ...state.layout, blocks };
+  if (commit) {
+    state.layout = saveLocal(state.layout);
+    scheduleAutoSync();
+    setStatus("Saved locally (auto)", "ok");
+  }
+  // Live update placement without full re-render (preserve pointer capture)
+  const el = document.querySelector(
+    `.studio-block[data-block-id="${CSS.escape(id)}"]`,
+  );
+  if (el) applyBlockPlacement(el, clamped);
+  return true;
+}
+
+function onBlockPointerDown(ev) {
+  if (!(ev.currentTarget instanceof HTMLElement)) return;
+  if (ev.target instanceof HTMLElement && ev.target.closest("[data-resize]")) {
     return;
   }
-  state.dragId = el.dataset.blockId ?? null;
-  el.classList.add("is-dragging");
-  ev.dataTransfer.effectAllowed = "move";
-  if (state.dragId) {
-    ev.dataTransfer.setData("text/plain", state.dragId);
-  }
-  try {
-    const ghost = document.createElement("div");
-    ghost.style.width = "1px";
-    ghost.style.height = "1px";
-    ghost.style.opacity = "0";
-    document.body.appendChild(ghost);
-    ev.dataTransfer.setDragImage(ghost, 0, 0);
-    requestAnimationFrame(() => ghost.remove());
-  } catch {
-    /* ignore */
-  }
-}
+  // Ignore text selection inside cards; still allow drag from card chrome
+  ev.preventDefault();
+  const id = ev.currentTarget.dataset.blockId;
+  if (!id) return;
+  const block = state.layout.blocks.find((b) => b.id === id);
+  if (!block) return;
 
-function onDragEnd(ev) {
-  ev.currentTarget.classList.remove("is-dragging");
-  state.dragId = null;
+  state.selectedId = id;
   document
-    .querySelectorAll(".is-drag-over")
-    .forEach((n) => n.classList.remove("is-drag-over"));
+    .querySelectorAll(".studio-block.is-selected")
+    .forEach((n) => n.classList.remove("is-selected"));
+  ev.currentTarget.classList.add("is-selected");
+
+  const startCell = cellFromPoint(ev.clientX, ev.clientY);
+  state.interaction = {
+    mode: "move",
+    id,
+    pointerId: ev.pointerId,
+    origin: { ...block },
+    grabOffset: {
+      x: startCell.x - block.x,
+      y: startCell.y - block.y,
+    },
+  };
+  ev.currentTarget.setPointerCapture(ev.pointerId);
+  ev.currentTarget.classList.add("is-dragging");
+  window.addEventListener("pointermove", onPointerMove);
+  window.addEventListener("pointerup", onPointerUp);
+  window.addEventListener("pointercancel", onPointerUp);
 }
 
-function onDragOver(ev) {
+function onResizePointerDown(ev) {
   ev.preventDefault();
-  ev.dataTransfer.dropEffect = "move";
-  const el = ev.currentTarget;
-  if (el.dataset.blockId !== state.dragId) {
-    el.classList.add("is-drag-over");
+  ev.stopPropagation();
+  const wrap = ev.currentTarget.closest(".studio-block");
+  if (!(wrap instanceof HTMLElement)) return;
+  const id = wrap.dataset.blockId;
+  if (!id) return;
+  const block = state.layout.blocks.find((b) => b.id === id);
+  if (!block) return;
+
+  state.selectedId = id;
+  document
+    .querySelectorAll(".studio-block.is-selected")
+    .forEach((n) => n.classList.remove("is-selected"));
+  wrap.classList.add("is-selected");
+
+  state.interaction = {
+    mode: "resize",
+    id,
+    pointerId: ev.pointerId,
+    origin: { ...block },
+  };
+  wrap.setPointerCapture(ev.pointerId);
+  wrap.classList.add("is-resizing");
+  window.addEventListener("pointermove", onPointerMove);
+  window.addEventListener("pointerup", onPointerUp);
+  window.addEventListener("pointercancel", onPointerUp);
+}
+
+function onPointerMove(ev) {
+  const ix = state.interaction;
+  if (!ix || ev.pointerId !== ix.pointerId) return;
+  const cell = cellFromPoint(ev.clientX, ev.clientY);
+  if (ix.mode === "move") {
+    const next = {
+      x: cell.x - ix.grabOffset.x,
+      y: cell.y - ix.grabOffset.y,
+      w: ix.origin.w,
+      h: ix.origin.h,
+    };
+    updateBlockRect(ix.id, next);
+  } else if (ix.mode === "resize") {
+    const next = {
+      x: ix.origin.x,
+      y: ix.origin.y,
+      w: cell.x - ix.origin.x + 1,
+      h: cell.y - ix.origin.y + 1,
+    };
+    updateBlockRect(ix.id, next);
   }
 }
 
-function onDragLeave(ev) {
-  ev.currentTarget.classList.remove("is-drag-over");
-}
+function onPointerUp(ev) {
+  const ix = state.interaction;
+  if (!ix || ev.pointerId !== ix.pointerId) return;
+  window.removeEventListener("pointermove", onPointerMove);
+  window.removeEventListener("pointerup", onPointerUp);
+  window.removeEventListener("pointercancel", onPointerUp);
 
-function onDrop(ev) {
-  ev.preventDefault();
-  const target = ev.currentTarget;
-  target.classList.remove("is-drag-over");
-  const fromId = state.dragId || ev.dataTransfer.getData("text/plain");
-  const toId = target.dataset.blockId;
-  if (!fromId || !toId || fromId === toId) return;
+  const el = document.querySelector(
+    `.studio-block[data-block-id="${CSS.escape(ix.id)}"]`,
+  );
+  if (el instanceof HTMLElement) {
+    el.classList.remove("is-dragging", "is-resizing");
+    try {
+      el.releasePointerCapture(ev.pointerId);
+    } catch {
+      /* ignore */
+    }
+  }
 
-  const blocks = [...state.layout.blocks];
-  const fromIdx = blocks.findIndex((b) => b.id === fromId);
-  const toIdx = blocks.findIndex((b) => b.id === toId);
-  if (fromIdx < 0 || toIdx < 0) return;
-  const [moved] = blocks.splice(fromIdx, 1);
-  blocks.splice(toIdx, 0, moved);
-  state.layout = saveLocal({ ...state.layout, blocks });
-  render();
-  setStatus("Saved locally (auto)", "ok");
+  // Commit final layout
+  state.layout = saveLocal(state.layout);
   scheduleAutoSync();
+  setStatus("Saved locally (auto)", "ok");
+  state.interaction = null;
+  render();
 }
 
 let autoSyncTimer = null;
@@ -516,6 +627,38 @@ async function loadFromServer() {
   setStatus(`Loaded from server · ${layout.updated_at}`, "ok");
 }
 
+async function exportLiquid() {
+  // Prefer server layout after sync so export matches what agents/device use
+  try {
+    await syncToServer({ quiet: true });
+  } catch {
+    /* still try export from server file / defaults */
+  }
+  const res = await fetch(liquidUrl(), {
+    headers: { Accept: "text/plain" },
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`liquid HTTP ${res.status}`);
+  const text = await res.text();
+  try {
+    await navigator.clipboard.writeText(text);
+    setStatus(
+      "Liquid copied — paste into TRMNL Markup → Full, then Force Refresh",
+      "ok",
+    );
+  } catch {
+    // Fallback: downloadable blob if clipboard blocked
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "creafridge-full.liquid";
+    a.click();
+    URL.revokeObjectURL(url);
+    setStatus("Liquid downloaded (clipboard blocked)", "ok");
+  }
+}
+
 function resetDefault() {
   state.layout = saveLocal(defaultLayout());
   render();
@@ -535,6 +678,11 @@ function wireActions() {
   document.getElementById("btn-load-server")?.addEventListener("click", () => {
     void loadFromServer().catch((e) =>
       setStatus(e instanceof Error ? e.message : "load failed", "err"),
+    );
+  });
+  document.getElementById("btn-export-liquid")?.addEventListener("click", () => {
+    void exportLiquid().catch((e) =>
+      setStatus(e instanceof Error ? e.message : "export failed", "err"),
     );
   });
   document.getElementById("btn-reset")?.addEventListener("click", () => {
