@@ -5,6 +5,10 @@ import { fileURLToPath } from "node:url";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { buildHealthPayload, buildPollPayload } from "./payload.js";
 import {
+  isAuthorizedPollRequest,
+  resolvePollToken,
+} from "./poll-auth.js";
+import {
   defaultStudioLayout,
   readStudioLayout,
   resolveStudioLayoutPath,
@@ -264,7 +268,27 @@ export async function handleRequest(
     return;
   }
 
-  if (path === "/" || path === "/poll") {
+  // Poll endpoints require TRMNL_POLL_TOKEN (path or ?token=)
+  const isPollPath =
+    path === "/" ||
+    path === "/poll" ||
+    path.startsWith("/poll/") ||
+    path.startsWith("/t/");
+
+  if (isPollPath) {
+    let expected: string;
+    try {
+      expected = resolvePollToken();
+    } catch {
+      sendJson(res, 401, { error: "unauthorized" });
+      return;
+    }
+
+    if (!isAuthorizedPollRequest(rawUrl, path, expected)) {
+      sendJson(res, 401, { error: "unauthorized" });
+      return;
+    }
+
     if (method === "HEAD") {
       res.writeHead(200, JSON_HEADERS);
       res.end();

@@ -14,7 +14,7 @@ This repo assumes **Polling** first; the same root JSON fields work for **Webhoo
 
 ### Polling
 
-- HTTPS URL: production `https://crearec.app/trmnl` (also `/poll` on the Node service).
+- HTTPS URL: production `https://crearec.app/trmnl/<TRMNL_POLL_TOKEN>` (Node also accepts `/poll/<token>`, `/t/<token>`, `/?token=`, `/poll?token=`).
 - Prefer JSON with a **flat root object**.
 - After save: **Force Refresh** so merge variables appear in the Markup Editor.
 

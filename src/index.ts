@@ -1,4 +1,7 @@
+import { assertPollTokenConfigured } from "./poll-auth.js";
 import { createServer, resolveListenOptions } from "./server.js";
+
+assertPollTokenConfigured();
 
 const { host, port } = resolveListenOptions();
 const server = createServer();
