@@ -222,7 +222,7 @@ function blockBody(id, poll) {
   }
 }
 
-function blockElement(block) {
+function blockElement(block, index, total) {
   const el = document.createElement("div");
   el.className = "studio-block outline rounded--medium p--2";
   el.dataset.blockId = block.id;
@@ -231,7 +231,11 @@ function blockElement(block) {
   el.innerHTML = `
     <div class="studio-block__chrome">
       <span class="studio-block__label">${esc(LABELS[block.id] || block.id)}</span>
-      <span class="studio-block__handle" aria-hidden="true">⠿</span>
+      <div class="studio-block__controls">
+        <button type="button" data-move="up" aria-label="Move up" ${index === 0 ? "disabled" : ""}>↑</button>
+        <button type="button" data-move="down" aria-label="Move down" ${index === total - 1 ? "disabled" : ""}>↓</button>
+        <span class="studio-block__handle" aria-hidden="true">⠿</span>
+      </div>
     </div>
     <div class="studio-block__body">${blockBody(block.id, state.poll)}</div>
   `;
@@ -240,52 +244,40 @@ function blockElement(block) {
   el.addEventListener("dragover", onDragOver);
   el.addEventListener("dragleave", onDragLeave);
   el.addEventListener("drop", onDrop);
+  el.querySelectorAll("[data-move]").forEach((btn) => {
+    btn.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      moveBlock(block.id, btn.getAttribute("data-move"));
+    });
+    // Prevent drag from starting on buttons
+    btn.addEventListener("mousedown", (ev) => ev.stopPropagation());
+  });
   return el;
 }
 
-/**
- * Group consecutive half-width blocks into rows for a simple 2-col weather pair.
- * @param {LayoutBlock[]} blocks
- */
-function groupForRender(blocks) {
-  /** @type {Array<{ type: "row", blocks: LayoutBlock[] } | { type: "single", block: LayoutBlock }>} */
-  const groups = [];
-  let i = 0;
-  while (i < blocks.length) {
-    const cur = blocks[i];
-    const next = blocks[i + 1];
-    if (
-      cur.width === "half" &&
-      next &&
-      next.width === "half"
-    ) {
-      groups.push({ type: "row", blocks: [cur, next] });
-      i += 2;
-    } else {
-      groups.push({ type: "single", block: cur });
-      i += 1;
-    }
-  }
-  return groups;
+function moveBlock(id, direction) {
+  const blocks = [...state.layout.blocks];
+  const idx = blocks.findIndex((b) => b.id === id);
+  if (idx < 0) return;
+  const target = direction === "up" ? idx - 1 : idx + 1;
+  if (target < 0 || target >= blocks.length) return;
+  const [moved] = blocks.splice(idx, 1);
+  blocks.splice(target, 0, moved);
+  state.layout = saveLocal({ ...state.layout, blocks });
+  renderBlocks();
+  setStatus("Saved locally (auto)", "ok");
+  scheduleAutoSync();
 }
 
 function renderBlocks() {
   const list = document.getElementById("block-list");
   if (!list) return;
   list.innerHTML = "";
-  const groups = groupForRender(state.layout.blocks);
-  for (const g of groups) {
-    if (g.type === "row") {
-      const row = document.createElement("div");
-      row.className = "studio-row";
-      for (const b of g.blocks) {
-        row.appendChild(blockElement(b));
-      }
-      list.appendChild(row);
-    } else {
-      list.appendChild(blockElement(g.block));
-    }
-  }
+  const blocks = state.layout.blocks;
+  blocks.forEach((b, i) => {
+    list.appendChild(blockElement(b, i, blocks.length));
+  });
 
   const screen = document.getElementById("screen");
   if (screen && !document.documentElement.classList.contains("has-trmnl-css")) {
@@ -301,11 +293,30 @@ function renderBlocks() {
 }
 
 function onDragStart(ev) {
-  const el = ev.currentTarget;
-  state.dragId = el.dataset.blockId;
+  const el = /** @type {HTMLElement} */ (ev.currentTarget);
+  // Don't start drag from control buttons
+  if (ev.target instanceof HTMLElement && ev.target.closest("[data-move]")) {
+    ev.preventDefault();
+    return;
+  }
+  state.dragId = el.dataset.blockId ?? null;
   el.classList.add("is-dragging");
   ev.dataTransfer.effectAllowed = "move";
-  ev.dataTransfer.setData("text/plain", state.dragId);
+  if (state.dragId) {
+    ev.dataTransfer.setData("text/plain", state.dragId);
+  }
+  // Transparent drag image reduces nested-content ghosts
+  try {
+    const ghost = document.createElement("div");
+    ghost.style.width = "1px";
+    ghost.style.height = "1px";
+    ghost.style.opacity = "0";
+    document.body.appendChild(ghost);
+    ev.dataTransfer.setDragImage(ghost, 0, 0);
+    requestAnimationFrame(() => ghost.remove());
+  } catch {
+    /* ignore */
+  }
 }
 
 function onDragEnd(ev) {
