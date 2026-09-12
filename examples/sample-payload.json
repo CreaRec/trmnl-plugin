@@ -1,20 +1,97 @@
 {
   "title": "CreaFridge",
   "plugin_label": "CreaFridge",
-  "updated_at": "2026-09-12T10:30:00Z",
-  "home_status": "home",
-  "home_summary": "Everyone accounted for · doors locked",
-  "presence": [
-    { "name": "Nikita", "state": "home" },
-    { "name": "Partner", "state": "away" },
-    { "name": "Dogs", "state": "home" }
+  "updated_at": "2026-09-13T15:30:00.000Z",
+  "weather": {
+    "today": {
+      "temp_c": 31.2,
+      "temp_f": 88.2,
+      "humidity": 48,
+      "cloud_cover": 20,
+      "condition": "Partly cloudy",
+      "low_c": 23.1,
+      "high_c": 33.4,
+      "low_f": 73.6,
+      "high_f": 92.1,
+      "precip_slots": [
+        { "time": "2026-09-13T22:00:00.000-05:00", "label": "5 PM", "mm": 0.4, "probability": 40 }
+      ],
+      "precip_summary": "0.4 mm · peak 40% @ 5 PM"
+    },
+    "tomorrow": {
+      "temp_c": 34.0,
+      "temp_f": 93.2,
+      "humidity": null,
+      "cloud_cover": null,
+      "condition": "Clear",
+      "low_c": 22.5,
+      "high_c": 34.0,
+      "low_f": 72.5,
+      "high_f": 93.2,
+      "precip_slots": [],
+      "precip_summary": "No precip"
+    }
+  },
+  "waste": {
+    "active": true,
+    "kind": "trash_recycle",
+    "label": "Trash + Recycle",
+    "is_sunday": true
+  },
+  "events": [
+    {
+      "start": "2026-09-13T00:00:00.000-05:00",
+      "end": "2026-09-13T23:59:59.999-05:00",
+      "title": "Farmers market",
+      "all_day": true,
+      "day_key": "2026-09-13",
+      "day_label": "Today",
+      "time_label": "All day"
+    },
+    {
+      "start": "2026-09-14T18:00:00.000-05:00",
+      "end": "2026-09-14T19:00:00.000-05:00",
+      "title": "Team sync",
+      "all_day": false,
+      "day_key": "2026-09-14",
+      "day_label": "Tomorrow",
+      "time_label": "6:00 PM–7:00 PM"
+    }
   ],
-  "routines": [
-    { "time": "12:00", "title": "Lunch prep" },
-    { "time": "18:30", "title": "Walk + dinner" },
-    { "time": "22:00", "title": "Lockup checklist" }
-  ],
-  "alerts": [
-    "Trash night — bins to curb"
+  "days": [
+    {
+      "key": "2026-09-13",
+      "label": "Today",
+      "is_today": true,
+      "is_tomorrow": false,
+      "events": [
+        {
+          "start": "2026-09-13T00:00:00.000-05:00",
+          "end": "2026-09-13T23:59:59.999-05:00",
+          "title": "Farmers market",
+          "all_day": true,
+          "day_key": "2026-09-13",
+          "day_label": "Today",
+          "time_label": "All day"
+        }
+      ]
+    },
+    {
+      "key": "2026-09-14",
+      "label": "Tomorrow",
+      "is_today": false,
+      "is_tomorrow": true,
+      "events": [
+        {
+          "start": "2026-09-14T18:00:00.000-05:00",
+          "end": "2026-09-14T19:00:00.000-05:00",
+          "title": "Team sync",
+          "all_day": false,
+          "day_key": "2026-09-14",
+          "day_label": "Tomorrow",
+          "time_label": "6:00 PM–7:00 PM"
+        }
+      ]
+    }
   ]
 }

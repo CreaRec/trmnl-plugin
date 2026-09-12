@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import type { AddressInfo } from "node:net";
 import { createServer } from "../src/server.js";
-import { buildPollPayload, buildHealthPayload } from "../src/payload.js";
+import { buildHealthPayload } from "../src/payload.js";
 
 const servers: ReturnType<typeof createServer>[] = [];
 
@@ -37,26 +37,36 @@ describe("trmnl-plugin HTTP", () => {
     expect(await res.json()).toEqual(buildHealthPayload());
   });
 
-  it("GET / returns poll JSON with live updated_at", async () => {
+  it("GET / returns fridge dashboard JSON with live updated_at", async () => {
     const before = Date.now();
     const base = await listen();
     const res = await fetch(`${base}/`);
     const after = Date.now();
     expect(res.status).toBe(200);
     expect(res.headers.get("cache-control")).toBe("no-store");
-    const body = (await res.json()) as ReturnType<typeof buildPollPayload>;
-    const sample = buildPollPayload(new Date(0));
-    expect(body.title).toBe(sample.title);
-    expect(body.plugin_label).toBe(sample.plugin_label);
-    expect(body.home_status).toBe(sample.home_status);
-    expect(body.home_summary).toBe(sample.home_summary);
-    expect(body.presence).toEqual(sample.presence);
-    expect(body.routines).toEqual(sample.routines);
-    expect(body.alerts).toEqual(sample.alerts);
-    const updatedMs = Date.parse(body.updated_at);
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(body.title).toBe("CreaFridge");
+    expect(body.plugin_label).toBe("CreaFridge");
+    expect(body.weather).toBeTypeOf("object");
+    expect(body.waste).toBeTypeOf("object");
+    expect(Array.isArray(body.events)).toBe(true);
+    expect(Array.isArray(body.days)).toBe(true);
+    expect((body.days as unknown[]).length).toBe(7);
+    expect(body).not.toHaveProperty("presence");
+    expect(body).not.toHaveProperty("routines");
+    expect(body).not.toHaveProperty("alerts");
+    const updatedMs = Date.parse(body.updated_at as string);
     expect(Number.isNaN(updatedMs)).toBe(false);
     expect(updatedMs).toBeGreaterThanOrEqual(before - 1000);
     expect(updatedMs).toBeLessThanOrEqual(after + 1000);
+
+    const weather = body.weather as {
+      today: { condition: string; precip_slots: unknown[] };
+      tomorrow: { condition: string };
+    };
+    expect(weather.today.condition).toBeTypeOf("string");
+    expect(Array.isArray(weather.today.precip_slots)).toBe(true);
+    expect(weather.tomorrow.condition).toBeTypeOf("string");
   });
 
   it("GET /poll matches GET / shape", async () => {

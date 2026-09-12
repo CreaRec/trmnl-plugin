@@ -1,5 +1,6 @@
 # Deploy copy for Debian host (/home/crearec/trmnl-plugin).
 # Bind to loopback — nginx on crearec.app proxies /trmnl → :8799.
+# Create /home/crearec/trmnl-plugin/.env out-of-band (CALENDAR_ICS_URL, weather vars).
 services:
   trmnl-plugin:
     image: ghcr.io/crearec/trmnl-plugin:main
@@ -7,6 +8,8 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:8799:8799"
+    env_file:
+      - .env
     environment:
       - PORT=8799
       - HOST=0.0.0.0

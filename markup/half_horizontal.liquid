@@ -1,13 +1,28 @@
-{% comment %} Mashup: half horizontal — compact home + next routine {% endcomment %}
+{% comment %} Mashup: half horizontal — weather + waste + next event {% endcomment %}
 
 <div class="layout layout--col gap--small">
-  <span class="title">{{ title | default: "CreaFridge" }}</span>
-  {% assign status = home_status | default: "—" %}
-  <span class="value {% if status == 'away' or status == 'empty' %}text--red{% endif %}">{{ status }}</span>
-  {% if routines and routines.size > 0 %}
-    <span class="description">
-      <span class="text--yellow">{{ routines[0].time }}</span> {{ routines[0].title }}
+  <div class="flex flex--row flex--between flex--center-y">
+    <span class="title">
+      {% if weather.today.temp_f %}{{ weather.today.temp_f | round }}°{% else %}—{% endif %}
     </span>
+    <span class="label">{{ weather.today.condition | default: "" }}</span>
+  </div>
+  {% if waste.active %}
+    <span class="label text--red">{{ waste.label }}</span>
+  {% endif %}
+  {% if days and days.size > 0 and days[0].events.size > 0 %}
+    <span class="description">
+      <span class="text--yellow">{{ days[0].events[0].time_label }}</span>
+      {{ days[0].events[0].title }}
+    </span>
+  {% elsif events and events.size > 0 %}
+    <span class="description">
+      <span class="text--yellow">{{ events[0].time_label }}</span>
+      {{ events[0].title }}
+    </span>
+  {% endif %}
+  {% if trmnl.device.percent_charged %}
+    <span class="label">{{ trmnl.device.percent_charged | round }}%</span>
   {% endif %}
 </div>
 

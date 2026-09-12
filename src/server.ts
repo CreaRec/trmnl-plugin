@@ -32,10 +32,10 @@ function normalizePath(url: string | undefined): string {
   return pathOnly || "/";
 }
 
-export function handleRequest(
+export async function handleRequest(
   req: IncomingMessage,
   res: ServerResponse,
-): void {
+): Promise<void> {
   const method = req.method?.toUpperCase() ?? "GET";
   const path = normalizePath(req.url);
 
@@ -69,7 +69,13 @@ export function handleRequest(
       res.end();
       return;
     }
-    sendJson(res, 200, buildPollPayload());
+    try {
+      const body = await buildPollPayload();
+      sendJson(res, 200, body);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "unknown_error";
+      sendJson(res, 500, { error: "poll_failed", message });
+    }
     return;
   }
 
@@ -77,7 +83,18 @@ export function handleRequest(
 }
 
 export function createServer(): http.Server {
-  return http.createServer(handleRequest);
+  return http.createServer((req, res) => {
+    void handleRequest(req, res).catch((err) => {
+      if (!res.headersSent) {
+        sendJson(res, 500, {
+          error: "internal_error",
+          message: err instanceof Error ? err.message : "unknown_error",
+        });
+      } else {
+        res.end();
+      }
+    });
+  });
 }
 
 export type ListenOptions = {

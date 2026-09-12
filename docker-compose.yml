@@ -5,6 +5,9 @@ services:
     restart: unless-stopped
     ports:
       - "8799:8799"
+    env_file:
+      - path: .env
+        required: false
     environment:
       - PORT=8799
       - HOST=0.0.0.0
