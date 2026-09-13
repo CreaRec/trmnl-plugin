@@ -133,6 +133,7 @@ describe("studio routes", () => {
     expect(js).toContain("GRID_COLS = 12");
     expect(js).toContain("GRID_ROWS = 8");
     expect(js).toContain("creafridge-weather__temp");
+    expect(js).toContain("creafridge-weather__range");
     expect(js).toContain("weatherSizeMetrics");
     expect(js).toContain("renderTitleBar");
     expect(js).toContain("title-bar-instance");

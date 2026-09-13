@@ -299,7 +299,7 @@ html.has-trmnl-css .studio-screen {
 .creafridge-weather__text {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   min-width: 0;
   overflow: hidden;
   text-align: left;
@@ -331,6 +331,7 @@ html.has-trmnl-css .studio-screen {
   object-fit: contain !important;
 }
 
+.creafridge-weather__range,
 .creafridge-weather__meta {
   font-size: var(--cf-meta, 1.15em) !important;
   line-height: 1.2 !important;
@@ -341,7 +342,9 @@ html.has-trmnl-css .studio-screen {
   white-space: nowrap;
 }
 
+.creafridge-weather .creafridge-weather__range.title,
 .creafridge-weather .creafridge-weather__meta.title,
+.creafridge-weather span.creafridge-weather__range,
 .creafridge-weather span.creafridge-weather__meta {
   font-size: var(--cf-meta, 1.15em) !important;
   font-weight: 600;
@@ -368,6 +371,7 @@ html.has-trmnl-css .studio-screen {
 }
 
 .creafridge-weather--compact .creafridge-weather__title,
+.creafridge-weather--compact .creafridge-weather__range,
 .creafridge-weather--compact .creafridge-weather__meta {
   display: none;
 }
@@ -378,21 +382,24 @@ html.has-trmnl-css .studio-screen {
   justify-items: center;
 }
 
-/* Battery / trash: fixed 1×1 icon cells */
+/* Battery / trash: fixed 1×1 — SVG fills cell (tiny padding) */
 .creafridge-battery-cell,
 .creafridge-trash-cell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2px 4px;
+  display: grid;
+  place-items: center;
+  padding: 2px;
   min-width: 0;
   min-height: 0;
+  box-sizing: border-box;
 }
 
 .creafridge-battery {
   color: #000;
-  flex-shrink: 0;
   display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
 }
 
 .creafridge-battery__seg {
@@ -415,9 +422,12 @@ html.has-trmnl-css .studio-screen {
 }
 
 .creafridge-trash {
-  flex-shrink: 0;
   display: block;
   color: #c0392b;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
 }
 
 /* Calendar: no header; tight 2-col grid (auto + 1fr), both columns left-aligned */

@@ -52,7 +52,8 @@ Public poll is tokenized at `https://crearec.app/trmnl/<uuid>` (TRMNL Polling). 
 ```
 
 - Cell units are integers; `x`/`y` are 0-based; `w`/`h` are spans (min `w≥2`, `h≥2` except **battery** and **trash** are fixed `1×1`).
-- Weather blocks show **°C** (condition/range on one line, degrees on the next), rearrange by span (`creafridge-weather--wide` / `--tall` / `--compact`), and scale icon/temp/meta via `--cf-*` vars from cell `w`/`h` so content fills larger blocks without overlapping when small.
+- Weather blocks show **°C** (large temp, then L/H range, then condition), rearrange by span (`creafridge-weather--wide` / `--tall` / `--compact`), and scale icon/temp/meta via `--cf-*` vars from cell `w`/`h` so content fills larger blocks without overlapping when small.
+- **Battery** and **trash** are fixed `1×1` icon cells; SVGs stretch to nearly fill the cell (tiny padding), centered.
 - **Battery** always shows the 4-segment icon (`trmnl.device.percent_charged`). **Trash** shows the red icon only when `waste.active`; otherwise an empty outlined cell.
 - Calendar has **no header**; **Today** uses `text--red`; day labels are date-first (e.g. `9/12 · Today`, `9/15 · Mon`); tight **2-column** grid (`max-content` + `1fr`), both columns left-aligned; events column fills remaining width.
 - Legacy `status` block (and v1 `{ id, width: "half"|"full" }`) is accepted on read and migrated to `battery` + `trash` at 1×1.
