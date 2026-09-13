@@ -356,8 +356,11 @@ function weatherCardHtml(day, label, opts = {}) {
 
   const range =
     day?.low_c != null && day?.high_c != null
-      ? ` · ${Math.round(day.low_c)}° / ${Math.round(day.high_c)}°`
+      ? `${Math.round(day.low_c)}° / ${Math.round(day.high_c)}°`
       : "";
+  const rangeHtml = range
+    ? `<span class="title creafridge-weather__range">${esc(range)}</span>`
+    : "";
 
   return `
     <div class="outline rounded--medium studio-block__card creafridge-weather creafridge-weather--${variant}" style="${sizeStyle}" data-w="${w}" data-h="${h}">
@@ -369,8 +372,9 @@ function weatherCardHtml(day, label, opts = {}) {
           src="${esc(icon)}"
         >
         <div class="creafridge-weather__text">
-          <span class="title creafridge-weather__meta">${esc(condition)}${esc(range)}</span>
           <span class="value creafridge-weather__temp">${esc(temp)}</span>
+          ${rangeHtml}
+          <span class="title creafridge-weather__meta">${esc(condition)}</span>
         </div>
       </div>
     </div>`;
@@ -386,7 +390,7 @@ function batteryIconHtml(percent) {
     })
     .join("");
   const lowCls = low ? " creafridge-battery--low" : "";
-  return `<svg class="creafridge-battery${lowCls}" viewBox="0 0 28 14" width="28" height="14" aria-label="Battery ${pct}%" role="img">
+  return `<svg class="creafridge-battery${lowCls}" viewBox="0 0 28 14" preserveAspectRatio="xMidYMid meet" aria-label="Battery ${pct}%" role="img">
         <rect x="0.5" y="2.5" width="23" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.25"/>
         <rect x="23.5" y="4.5" width="3" height="5" rx="0.75" fill="currentColor"/>
         ${segs}
@@ -394,7 +398,7 @@ function batteryIconHtml(percent) {
 }
 
 function trashIconHtml(label) {
-  return `<svg class="creafridge-trash text--red" viewBox="0 0 16 16" width="16" height="16" aria-label="${esc(label)}" role="img">
+  return `<svg class="creafridge-trash text--red" viewBox="0 0 16 16" preserveAspectRatio="xMidYMid meet" aria-label="${esc(label)}" role="img">
         <path fill="currentColor" d="M6 1h4l.5 1.5H14v1.5H2V2.5h3.5L6 1zm1 4h1.5v7H7V5zm3 0H11.5v7H10V5zM4.5 5H6v7H4.5V5zM3 13.5h10V15H3v-1.5z"/>
       </svg>`;
 }

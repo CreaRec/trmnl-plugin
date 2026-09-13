@@ -97,13 +97,23 @@ describe("renderStudioLiquid weather + battery/trash", () => {
     expect(liquid).not.toMatch(/grid--cols-4/);
     expect(liquid).not.toMatch(/col--span-3/);
     expect(liquid).toMatch(/--cf-cols:/);
-    // Condition/range (title meta) above °C (value temp) for e-ink readability
+    // °C (value) → L/H range → condition (title meta) for e-ink scan order
     expect(liquid).toMatch(
-      /title creafridge-weather__meta[\s\S]*?value creafridge-weather__temp/,
+      /value creafridge-weather__temp[\s\S]*?creafridge-weather__range[\s\S]*?title creafridge-weather__meta/,
     );
+    expect(liquid).toMatch(/low_c \| round \}\}° \/ \{\{ .*high_c \| round \}\}°/);
+    expect(liquid).toMatch(
+      /\.creafridge-battery \{\s*color: #000;\s*display: block;\s*width: 100%;\s*height: 100%;/,
+    );
+    expect(liquid).toMatch(
+      /\.creafridge-trash \{\s*display: block;\s*color: #c0392b;\s*width: 100%;\s*height: 100%;/,
+    );
+    expect(liquid).toMatch(/place-items:\s*center/);
     expect(liquid).not.toMatch(
       /label creafridge-weather__meta/,
     );
+    expect(liquid).not.toMatch(/width="28" height="14"/);
+    expect(liquid).not.toMatch(/width="16" height="16"/);
   });
 
   it("bakes tall/compact weather classes and metrics from cell spans", () => {

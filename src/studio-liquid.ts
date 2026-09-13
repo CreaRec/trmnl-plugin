@@ -70,7 +70,7 @@ export function weatherSizeMetrics(
   );
   const tempEm =
     Math.round(Math.min(desired, tempFromWidth) * 100) / 100;
-  // Condition/range line at title/value scale for BWRY e-ink (avoid tiny label)
+  // L/H + condition lines at title/value scale for BWRY e-ink (avoid tiny label)
   const metaEm =
     Math.round(
       Math.min(
@@ -113,12 +113,13 @@ function weatherSnippet(
       src="{{ ${prefix}.icon | default: 'https://trmnl.com/images/plugins/weather/wi-na.svg' }}"
     >
     <div class="creafridge-weather__text">
-      <span class="title creafridge-weather__meta">
-        {{ ${prefix}.condition | default: "—" }}{% if ${prefix}.low_c and ${prefix}.high_c %} · {{ ${prefix}.low_c | round }}° / {{ ${prefix}.high_c | round }}°{% endif %}
-      </span>
       <span class="value creafridge-weather__temp">
         ${tempLiquid}
       </span>
+      {% if ${prefix}.low_c and ${prefix}.high_c %}
+        <span class="title creafridge-weather__range">{{ ${prefix}.low_c | round }}° / {{ ${prefix}.high_c | round }}°</span>
+      {% endif %}
+      <span class="title creafridge-weather__meta">{{ ${prefix}.condition | default: "—" }}</span>
     </div>
   </div>
 </div>`;
@@ -130,7 +131,7 @@ function batterySnippet(): string {
   {% assign cf_batt_pct = trmnl.device.percent_charged | default: 0 | round %}
   {% if cf_batt_pct <= 0 %}{% assign cf_batt_segs = 1 %}{% elsif cf_batt_pct <= 25 %}{% assign cf_batt_segs = 1 %}{% elsif cf_batt_pct <= 50 %}{% assign cf_batt_segs = 2 %}{% elsif cf_batt_pct <= 75 %}{% assign cf_batt_segs = 3 %}{% else %}{% assign cf_batt_segs = 4 %}{% endif %}
   {% if cf_batt_pct < 25 %}{% assign cf_batt_low = true %}{% else %}{% assign cf_batt_low = false %}{% endif %}
-  <svg class="creafridge-battery{% if cf_batt_low %} creafridge-battery--low{% endif %}" viewBox="0 0 28 14" width="28" height="14" aria-label="Battery {{ cf_batt_pct }}%" role="img">
+  <svg class="creafridge-battery{% if cf_batt_low %} creafridge-battery--low{% endif %}" viewBox="0 0 28 14" preserveAspectRatio="xMidYMid meet" aria-label="Battery {{ cf_batt_pct }}%" role="img">
     <rect x="0.5" y="2.5" width="23" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.25"/>
     <rect x="23.5" y="4.5" width="3" height="5" rx="0.75" fill="currentColor"/>
     <rect class="creafridge-battery__seg{% if cf_batt_segs >= 1 %} is-filled{% endif %}" x="2.5" y="4.25" width="4" height="5.5" rx="0.5"/>
@@ -145,7 +146,7 @@ function batterySnippet(): string {
 function trashSnippet(): string {
   return `<div class="outline rounded--medium creafridge-trash-cell" style="height:100%;box-sizing:border-box;overflow:hidden;">
   {% if waste.active %}
-    <svg class="creafridge-trash text--red" viewBox="0 0 16 16" width="16" height="16" aria-label="{{ waste.label | default: 'Waste' }}" role="img">
+    <svg class="creafridge-trash text--red" viewBox="0 0 16 16" preserveAspectRatio="xMidYMid meet" aria-label="{{ waste.label | default: 'Waste' }}" role="img">
       <path fill="currentColor" d="M6 1h4l.5 1.5H14v1.5H2V2.5h3.5L6 1zm1 4h1.5v7H7V5zm3 0H11.5v7H10V5zM4.5 5H6v7H4.5V5zM3 13.5h10V15H3v-1.5z"/>
     </svg>
   {% endif %}
@@ -253,7 +254,7 @@ export const CREAFRIDGE_BLOCK_CSS = `
   .creafridge-weather__text {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
     min-width: 0;
     overflow: hidden;
     text-align: left;
@@ -280,6 +281,7 @@ export const CREAFRIDGE_BLOCK_CSS = `
     max-height: 85% !important;
     object-fit: contain !important;
   }
+  .creafridge-weather__range,
   .creafridge-weather__meta {
     font-size: var(--cf-meta, 1.15em) !important;
     line-height: 1.2 !important;
@@ -289,7 +291,9 @@ export const CREAFRIDGE_BLOCK_CSS = `
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  .creafridge-weather .creafridge-weather__range.title,
   .creafridge-weather .creafridge-weather__meta.title,
+  .creafridge-weather span.creafridge-weather__range,
   .creafridge-weather span.creafridge-weather__meta {
     font-size: var(--cf-meta, 1.15em) !important;
     font-weight: 600;
@@ -304,6 +308,7 @@ export const CREAFRIDGE_BLOCK_CSS = `
   .creafridge-weather--tall .creafridge-weather__title { text-align: center; }
   .creafridge-weather--wide .creafridge-weather__body { grid-template-columns: auto 1fr; }
   .creafridge-weather--compact .creafridge-weather__title,
+  .creafridge-weather--compact .creafridge-weather__range,
   .creafridge-weather--compact .creafridge-weather__meta { display: none; }
   .creafridge-weather--compact .creafridge-weather__body {
     grid-template-columns: auto auto;
@@ -312,19 +317,33 @@ export const CREAFRIDGE_BLOCK_CSS = `
   }
   .creafridge-battery-cell,
   .creafridge-trash-cell {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2px 4px;
+    display: grid;
+    place-items: center;
+    padding: 2px;
     min-width: 0;
     min-height: 0;
+    box-sizing: border-box;
   }
-  .creafridge-battery { color: #000; flex-shrink: 0; display: block; }
+  .creafridge-battery {
+    color: #000;
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+  }
   .creafridge-battery__seg { fill: none; stroke: currentColor; stroke-width: 1; }
   .creafridge-battery__seg.is-filled { fill: currentColor; stroke: none; }
   .creafridge-battery--low { color: #c0392b; }
   .creafridge-battery--low .creafridge-battery__seg.is-filled { fill: #c0392b; }
-  .creafridge-trash { flex-shrink: 0; display: block; color: #c0392b; }
+  .creafridge-trash {
+    display: block;
+    color: #c0392b;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+  }
   .creafridge-calendar {
     display: flex;
     flex-direction: column;
