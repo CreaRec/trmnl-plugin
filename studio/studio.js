@@ -304,8 +304,8 @@ function weatherSizeMetrics(w, h) {
   const metaEm =
     Math.round(
       Math.min(
-        1.1,
-        Math.max(0.55, 0.5 + short * 0.07 + Math.max(0, hh - 2) * 0.05),
+        1.55,
+        Math.max(0.95, 0.92 + short * 0.1 + Math.max(0, hh - 2) * 0.08),
       ) * 100,
     ) / 100;
   return { iconPx, tempEm, gapPx, metaEm };
@@ -369,8 +369,8 @@ function weatherCardHtml(day, label, opts = {}) {
           src="${esc(icon)}"
         >
         <div class="creafridge-weather__text">
+          <span class="title creafridge-weather__meta">${esc(condition)}${esc(range)}</span>
           <span class="value creafridge-weather__temp">${esc(temp)}</span>
-          <span class="label creafridge-weather__meta">${esc(condition)}${esc(range)}</span>
         </div>
       </div>
     </div>`;

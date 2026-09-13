@@ -70,10 +70,13 @@ export function weatherSizeMetrics(
   );
   const tempEm =
     Math.round(Math.min(desired, tempFromWidth) * 100) / 100;
+  // Condition/range line at title/value scale for BWRY e-ink (avoid tiny label)
   const metaEm =
     Math.round(
-      Math.min(1.1, Math.max(0.55, 0.5 + short * 0.07 + Math.max(0, hh - 2) * 0.05)) *
-        100,
+      Math.min(
+        1.55,
+        Math.max(0.95, 0.92 + short * 0.1 + Math.max(0, hh - 2) * 0.08),
+      ) * 100,
     ) / 100;
   return { iconPx, tempEm, gapPx, metaEm };
 }
@@ -110,11 +113,11 @@ function weatherSnippet(
       src="{{ ${prefix}.icon | default: 'https://trmnl.com/images/plugins/weather/wi-na.svg' }}"
     >
     <div class="creafridge-weather__text">
+      <span class="title creafridge-weather__meta">
+        {{ ${prefix}.condition | default: "—" }}{% if ${prefix}.low_c and ${prefix}.high_c %} · {{ ${prefix}.low_c | round }}° / {{ ${prefix}.high_c | round }}°{% endif %}
+      </span>
       <span class="value creafridge-weather__temp">
         ${tempLiquid}
-      </span>
-      <span class="label creafridge-weather__meta">
-        {{ ${prefix}.condition | default: "—" }}{% if ${prefix}.low_c and ${prefix}.high_c %} · {{ ${prefix}.low_c | round }}° / {{ ${prefix}.high_c | round }}°{% endif %}
       </span>
     </div>
   </div>
@@ -250,7 +253,7 @@ export const CREAFRIDGE_BLOCK_CSS = `
   .creafridge-weather__text {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
     min-width: 0;
     overflow: hidden;
     text-align: left;
@@ -278,11 +281,18 @@ export const CREAFRIDGE_BLOCK_CSS = `
     object-fit: contain !important;
   }
   .creafridge-weather__meta {
-    font-size: var(--cf-meta, 0.85em);
+    font-size: var(--cf-meta, 1.15em) !important;
+    line-height: 1.2 !important;
+    font-weight: 600;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .creafridge-weather .creafridge-weather__meta.title,
+  .creafridge-weather span.creafridge-weather__meta {
+    font-size: var(--cf-meta, 1.15em) !important;
+    font-weight: 600;
   }
   .creafridge-weather--tall .creafridge-weather__body {
     grid-template-columns: 1fr;
@@ -328,8 +338,8 @@ export const CREAFRIDGE_BLOCK_CSS = `
   }
   .creafridge-calendar__list {
     display: grid;
-    grid-template-columns: auto 1fr;
-    column-gap: 8px;
+    grid-template-columns: max-content 1fr;
+    column-gap: 10px;
     row-gap: 3px;
     align-items: start;
     justify-items: start;
@@ -348,6 +358,7 @@ export const CREAFRIDGE_BLOCK_CSS = `
     flex-direction: column;
     gap: 1px;
     min-width: 0;
+    width: 100%;
     text-align: left;
     justify-self: stretch;
   }

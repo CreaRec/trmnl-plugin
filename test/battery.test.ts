@@ -92,11 +92,18 @@ describe("renderStudioLiquid weather + battery/trash", () => {
     expect(liquid).not.toMatch(/value--xsmall">Battery/);
     expect(liquid).not.toMatch(/creafridge-status/);
     expect(liquid).toMatch(/creafridge-calendar/);
-    expect(liquid).toMatch(/grid-template-columns:\s*auto 1fr/);
+    expect(liquid).toMatch(/grid-template-columns:\s*max-content 1fr/);
     expect(liquid).not.toMatch(/Calendar · 7 days/);
     expect(liquid).not.toMatch(/grid--cols-4/);
     expect(liquid).not.toMatch(/col--span-3/);
     expect(liquid).toMatch(/--cf-cols:/);
+    // Condition/range (title meta) above °C (value temp) for e-ink readability
+    expect(liquid).toMatch(
+      /title creafridge-weather__meta[\s\S]*?value creafridge-weather__temp/,
+    );
+    expect(liquid).not.toMatch(
+      /label creafridge-weather__meta/,
+    );
   });
 
   it("bakes tall/compact weather classes and metrics from cell spans", () => {

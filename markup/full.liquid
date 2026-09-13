@@ -58,7 +58,7 @@
   .creafridge-weather__text {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
     min-width: 0;
     overflow: hidden;
     text-align: left;
@@ -86,11 +86,18 @@
     object-fit: contain !important;
   }
   .creafridge-weather__meta {
-    font-size: var(--cf-meta, 0.85em);
+    font-size: var(--cf-meta, 1.15em) !important;
+    line-height: 1.2 !important;
+    font-weight: 600;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .creafridge-weather .creafridge-weather__meta.title,
+  .creafridge-weather span.creafridge-weather__meta {
+    font-size: var(--cf-meta, 1.15em) !important;
+    font-weight: 600;
   }
   .creafridge-weather--tall .creafridge-weather__body {
     grid-template-columns: 1fr;
@@ -136,8 +143,8 @@
   }
   .creafridge-calendar__list {
     display: grid;
-    grid-template-columns: auto 1fr;
-    column-gap: 8px;
+    grid-template-columns: max-content 1fr;
+    column-gap: 10px;
     row-gap: 3px;
     align-items: start;
     justify-items: start;
@@ -156,6 +163,7 @@
     flex-direction: column;
     gap: 1px;
     min-width: 0;
+    width: 100%;
     text-align: left;
     justify-self: stretch;
   }
@@ -163,7 +171,7 @@
 
 <div class="creafridge-grid">
   <div class="creafridge-cell" style="grid-column: 1 / span 4; grid-row: 1 / span 3;">
-    <div class="outline rounded--medium creafridge-weather creafridge-weather--wide" style="height:100%;box-sizing:border-box;overflow:hidden;--cf-cols:4;--cf-rows:3;--cf-icon:71px;--cf-temp:1.9em;--cf-gap:3px;--cf-meta:0.76em" data-w="4" data-h="3">
+    <div class="outline rounded--medium creafridge-weather creafridge-weather--wide" style="height:100%;box-sizing:border-box;overflow:hidden;--cf-cols:4;--cf-rows:3;--cf-icon:71px;--cf-temp:1.9em;--cf-gap:3px;--cf-meta:1.3em" data-w="4" data-h="3">
       <span class="label creafridge-weather__title">Weather · Today</span>
       <div class="creafridge-weather__body">
         <img
@@ -172,11 +180,11 @@
           src="{{ weather.today.icon | default: 'https://trmnl.com/images/plugins/weather/wi-na.svg' }}"
         >
         <div class="creafridge-weather__text">
+          <span class="title creafridge-weather__meta">
+            {{ weather.today.condition | default: "—" }}{% if weather.today.low_c and weather.today.high_c %} · {{ weather.today.low_c | round }}° / {{ weather.today.high_c | round }}°{% endif %}
+          </span>
           <span class="value creafridge-weather__temp">
             {% if weather.today.temp_c %}{{ weather.today.temp_c | round }}°C{% else %}—{% endif %}
-          </span>
-          <span class="label creafridge-weather__meta">
-            {{ weather.today.condition | default: "—" }}{% if weather.today.low_c and weather.today.high_c %} · {{ weather.today.low_c | round }}° / {{ weather.today.high_c | round }}°{% endif %}
           </span>
         </div>
       </div>
@@ -184,7 +192,7 @@
   </div>
 
   <div class="creafridge-cell" style="grid-column: 5 / span 4; grid-row: 1 / span 3;">
-    <div class="outline rounded--medium creafridge-weather creafridge-weather--wide" style="height:100%;box-sizing:border-box;overflow:hidden;--cf-cols:4;--cf-rows:3;--cf-icon:71px;--cf-temp:1.9em;--cf-gap:3px;--cf-meta:0.76em" data-w="4" data-h="3">
+    <div class="outline rounded--medium creafridge-weather creafridge-weather--wide" style="height:100%;box-sizing:border-box;overflow:hidden;--cf-cols:4;--cf-rows:3;--cf-icon:71px;--cf-temp:1.9em;--cf-gap:3px;--cf-meta:1.3em" data-w="4" data-h="3">
       <span class="label creafridge-weather__title">Weather · Tomorrow</span>
       <div class="creafridge-weather__body">
         <img
@@ -193,11 +201,11 @@
           src="{{ weather.tomorrow.icon | default: 'https://trmnl.com/images/plugins/weather/wi-na.svg' }}"
         >
         <div class="creafridge-weather__text">
+          <span class="title creafridge-weather__meta">
+            {{ weather.tomorrow.condition | default: "—" }}{% if weather.tomorrow.low_c and weather.tomorrow.high_c %} · {{ weather.tomorrow.low_c | round }}° / {{ weather.tomorrow.high_c | round }}°{% endif %}
+          </span>
           <span class="value creafridge-weather__temp">
             {% if weather.tomorrow.temp_c %}{{ weather.tomorrow.temp_c | round }}°C{% elsif weather.tomorrow.high_c %}{{ weather.tomorrow.high_c | round }}°C{% else %}—{% endif %}
-          </span>
-          <span class="label creafridge-weather__meta">
-            {{ weather.tomorrow.condition | default: "—" }}{% if weather.tomorrow.low_c and weather.tomorrow.high_c %} · {{ weather.tomorrow.low_c | round }}° / {{ weather.tomorrow.high_c | round }}°{% endif %}
           </span>
         </div>
       </div>
