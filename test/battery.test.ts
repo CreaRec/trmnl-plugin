@@ -80,7 +80,7 @@ describe("renderStudioLiquid weather + battery/trash", () => {
     expect(liquid).not.toMatch(/temp_f/);
     expect(liquid).not.toMatch(/°F/);
     expect(liquid).toMatch(/creafridge-weather--wide/);
-    expect(liquid).toMatch(/data-w="6"/);
+    expect(liquid).toMatch(/data-w="4"/);
     expect(liquid).toMatch(/--cf-icon:/);
     expect(liquid).toMatch(/--cf-temp:/);
     expect(liquid).toMatch(/creafridge-battery/);

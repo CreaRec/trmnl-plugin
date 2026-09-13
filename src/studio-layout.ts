@@ -62,13 +62,13 @@ export type StudioLayout = {
 
 const BLOCK_ID_SET = new Set<string>(BLOCK_IDS);
 
-/** Default v2 placement: weather top halves, battery+trash 1×1, calendar rest. */
+/** Default v2 placement: weather 4×3 pair, trash+battery top-right 1×1, calendar rest. */
 export function defaultBlockRects(): LayoutBlock[] {
   return [
-    { id: "weather_today", x: 0, y: 0, w: 6, h: 3 },
-    { id: "weather_tomorrow", x: 6, y: 0, w: 6, h: 3 },
-    { id: "battery", x: 0, y: 3, w: 1, h: 1 },
-    { id: "trash", x: 1, y: 3, w: 1, h: 1 },
+    { id: "weather_today", x: 0, y: 0, w: 4, h: 3 },
+    { id: "weather_tomorrow", x: 4, y: 0, w: 4, h: 3 },
+    { id: "battery", x: 11, y: 0, w: 1, h: 1 },
+    { id: "trash", x: 10, y: 0, w: 1, h: 1 },
     { id: "calendar", x: 0, y: 4, w: 12, h: 4 },
   ];
 }
