@@ -93,7 +93,7 @@ Without a valid token, poll endpoints return `401` `{"error":"unauthorized"}`. H
 ├── examples/
 │   └── sample-payload.json
 └── markup/
-    ├── full.liquid               # Full layout (half/half weather °C, battery+trash, all 7 days)
+    ├── full.liquid               # Full layout (Studio CSS grid: 4×3 weather pair, trash+battery, calendar)
     ├── half_horizontal.liquid
     ├── half_vertical.liquid
     ├── quadrant.liquid
@@ -148,7 +148,7 @@ Waste is **not** injected into the calendar.
 2. Strategy → **Polling** (recommended).
 3. Save, then **Edit Markup**.
 4. Paste from `markup/` (or Studio export):
-   - `full.liquid` → **Full** (default equal weather halves + battery/trash + calendar), **or** paste Liquid from Studio **Export Liquid** / `GET /studio/liquid` for a freeform 12×8 CSS grid
+   - `full.liquid` → **Full** (default Studio layout: 4×3 weather pair + top-right trash/battery + calendar), **or** paste Liquid from Studio **Export Liquid** / `GET /studio/liquid` for a freeform 12×8 CSS grid
    - optional half / quadrant tabs
    - `shared.liquid` → **Shared** (Studio export embeds its own `<style>` in Full; Shared stays light)
 5. Force Refresh; preview as **TRMNL OG (B/W/R/Y)**. Re-paste Full after markup changes or after exporting a new Studio layout — Studio sync alone does not push Liquid to TRMNL.

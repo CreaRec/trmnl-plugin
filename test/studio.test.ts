@@ -181,7 +181,7 @@ describe("studio routes", () => {
     expect(body.version).toBe(def.version);
     expect(body.grid).toEqual({ cols: 12, rows: 8 });
     expect(body.blocks.map((b) => b.id)).toEqual(def.blocks.map((b) => b.id));
-    expect(body.blocks[0]).toMatchObject({ x: 0, y: 0, w: 6, h: 3 });
+    expect(body.blocks[0]).toMatchObject({ x: 0, y: 0, w: 4, h: 3 });
   });
 
   it("PUT v1 layout migrates status to battery+trash on write", async () => {
@@ -217,7 +217,7 @@ describe("studio routes", () => {
     ]);
     expect(saved.blocks.find((b) => b.id === "weather_today")).toMatchObject({
       x: 0,
-      w: 6,
+      w: 4,
     });
     expect(saved.blocks.find((b) => b.id === "battery")).toMatchObject({
       w: 1,

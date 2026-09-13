@@ -21,10 +21,10 @@ describe("studio-layout v2", () => {
     expect(layout.version).toBe(2);
     expect(layout.grid).toEqual({ cols: GRID_COLS, rows: GRID_ROWS });
     expect(layout.blocks).toEqual([
-      { id: "weather_today", x: 0, y: 0, w: 6, h: 3 },
-      { id: "weather_tomorrow", x: 6, y: 0, w: 6, h: 3 },
-      { id: "battery", x: 0, y: 3, w: 1, h: 1 },
-      { id: "trash", x: 1, y: 3, w: 1, h: 1 },
+      { id: "weather_today", x: 0, y: 0, w: 4, h: 3 },
+      { id: "weather_tomorrow", x: 4, y: 0, w: 4, h: 3 },
+      { id: "battery", x: 11, y: 0, w: 1, h: 1 },
+      { id: "trash", x: 10, y: 0, w: 1, h: 1 },
       { id: "calendar", x: 0, y: 4, w: 12, h: 4 },
     ]);
   });
@@ -47,12 +47,12 @@ describe("studio-layout v2", () => {
     expect(migrated.find((b) => b.id === "weather_today")).toMatchObject({
       x: 0,
       y: 0,
-      w: 6,
+      w: 4,
       h: 3,
     });
     expect(migrated.find((b) => b.id === "battery")).toMatchObject({
-      x: 0,
-      y: 3,
+      x: 11,
+      y: 0,
       w: 1,
       h: 1,
     });
@@ -188,7 +188,7 @@ describe("studio-layout v2", () => {
     expect(liquid).toMatch(/creafridge-grid/);
     expect(liquid).toMatch(/grid-template-columns:\s*repeat\(12/);
     expect(liquid).toMatch(/grid-template-rows:\s*repeat\(8/);
-    expect(liquid).toMatch(/grid-column:\s*1 \/ span 6/);
+    expect(liquid).toMatch(/grid-column:\s*1 \/ span 4/);
     expect(liquid).toMatch(/CreaFridge Studio/);
     expect(liquid).not.toMatch(/studio-/);
     expect(liquid).toMatch(/title_bar/);

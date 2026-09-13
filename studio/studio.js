@@ -39,10 +39,10 @@ function fixedSizeFor(id) {
 
 function defaultBlockRects() {
   return [
-    { id: "weather_today", x: 0, y: 0, w: 6, h: 3 },
-    { id: "weather_tomorrow", x: 6, y: 0, w: 6, h: 3 },
-    { id: "battery", x: 0, y: 3, w: 1, h: 1 },
-    { id: "trash", x: 1, y: 3, w: 1, h: 1 },
+    { id: "weather_today", x: 0, y: 0, w: 4, h: 3 },
+    { id: "weather_tomorrow", x: 4, y: 0, w: 4, h: 3 },
+    { id: "battery", x: 11, y: 0, w: 1, h: 1 },
+    { id: "trash", x: 10, y: 0, w: 1, h: 1 },
     { id: "calendar", x: 0, y: 4, w: 12, h: 4 },
   ];
 }
