@@ -92,7 +92,7 @@ describe("renderStudioLiquid weather + battery/trash", () => {
     expect(liquid).not.toMatch(/value--xsmall">Battery/);
     expect(liquid).not.toMatch(/creafridge-status/);
     expect(liquid).toMatch(/creafridge-calendar/);
-    expect(liquid).toMatch(/grid-template-columns:\s*auto 1fr/);
+    expect(liquid).toMatch(/grid-template-columns:\s*max-content 1fr/);
     expect(liquid).not.toMatch(/Calendar · 7 days/);
     expect(liquid).not.toMatch(/grid--cols-4/);
     expect(liquid).not.toMatch(/col--span-3/);

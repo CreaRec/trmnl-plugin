@@ -70,12 +70,12 @@ export function weatherSizeMetrics(
   );
   const tempEm =
     Math.round(Math.min(desired, tempFromWidth) * 100) / 100;
-  // Condition/range line uses title/value scale (not tiny label) for BWRY e-ink
+  // Condition/range line at title/value scale for BWRY e-ink (avoid tiny label)
   const metaEm =
     Math.round(
       Math.min(
-        1.35,
-        Math.max(0.85, 0.78 + short * 0.08 + Math.max(0, hh - 2) * 0.06),
+        1.55,
+        Math.max(0.95, 0.92 + short * 0.1 + Math.max(0, hh - 2) * 0.08),
       ) * 100,
     ) / 100;
   return { iconPx, tempEm, gapPx, metaEm };
@@ -253,7 +253,7 @@ export const CREAFRIDGE_BLOCK_CSS = `
   .creafridge-weather__text {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
     min-width: 0;
     overflow: hidden;
     text-align: left;
@@ -281,8 +281,9 @@ export const CREAFRIDGE_BLOCK_CSS = `
     object-fit: contain !important;
   }
   .creafridge-weather__meta {
-    font-size: var(--cf-meta, 1em) !important;
-    line-height: 1.15 !important;
+    font-size: var(--cf-meta, 1.15em) !important;
+    line-height: 1.2 !important;
+    font-weight: 600;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -290,7 +291,8 @@ export const CREAFRIDGE_BLOCK_CSS = `
   }
   .creafridge-weather .creafridge-weather__meta.title,
   .creafridge-weather span.creafridge-weather__meta {
-    font-size: var(--cf-meta, 1em) !important;
+    font-size: var(--cf-meta, 1.15em) !important;
+    font-weight: 600;
   }
   .creafridge-weather--tall .creafridge-weather__body {
     grid-template-columns: 1fr;
@@ -336,8 +338,8 @@ export const CREAFRIDGE_BLOCK_CSS = `
   }
   .creafridge-calendar__list {
     display: grid;
-    grid-template-columns: auto 1fr;
-    column-gap: 8px;
+    grid-template-columns: max-content 1fr;
+    column-gap: 10px;
     row-gap: 3px;
     align-items: start;
     justify-items: start;

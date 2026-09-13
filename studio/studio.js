@@ -304,8 +304,8 @@ function weatherSizeMetrics(w, h) {
   const metaEm =
     Math.round(
       Math.min(
-        1.35,
-        Math.max(0.85, 0.78 + short * 0.08 + Math.max(0, hh - 2) * 0.06),
+        1.55,
+        Math.max(0.95, 0.92 + short * 0.1 + Math.max(0, hh - 2) * 0.08),
       ) * 100,
     ) / 100;
   return { iconPx, tempEm, gapPx, metaEm };

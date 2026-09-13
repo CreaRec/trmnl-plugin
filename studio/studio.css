@@ -299,7 +299,7 @@ html.has-trmnl-css .studio-screen {
 .creafridge-weather__text {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   min-width: 0;
   overflow: hidden;
   text-align: left;
@@ -332,8 +332,9 @@ html.has-trmnl-css .studio-screen {
 }
 
 .creafridge-weather__meta {
-  font-size: var(--cf-meta, 1em) !important;
-  line-height: 1.15 !important;
+  font-size: var(--cf-meta, 1.15em) !important;
+  line-height: 1.2 !important;
+  font-weight: 600;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -342,7 +343,8 @@ html.has-trmnl-css .studio-screen {
 
 .creafridge-weather .creafridge-weather__meta.title,
 .creafridge-weather span.creafridge-weather__meta {
-  font-size: var(--cf-meta, 1em) !important;
+  font-size: var(--cf-meta, 1.15em) !important;
+  font-weight: 600;
 }
 
 .creafridge-weather--tall .creafridge-weather__body {
@@ -433,8 +435,8 @@ html.has-trmnl-css .studio-screen {
 
 .creafridge-calendar__list {
   display: grid;
-  grid-template-columns: auto 1fr;
-  column-gap: 8px;
+  grid-template-columns: max-content 1fr;
+  column-gap: 10px;
   row-gap: 3px;
   align-items: start;
   justify-items: start;
