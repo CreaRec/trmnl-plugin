@@ -38,9 +38,9 @@ describe("calendar ICS parsing", () => {
 
     expect(days).toHaveLength(7);
     expect(days[0]!.is_today).toBe(true);
-    expect(days[0]!.label).toBe("Today · 9/13");
+    expect(days[0]!.label).toBe("9/13 · Today");
     expect(days[1]!.is_tomorrow).toBe(true);
-    expect(days[1]!.label).toBe("Tomorrow · 9/14");
+    expect(days[1]!.label).toBe("9/14 · Tomorrow");
 
     const titles = events.map((e) => e.title);
     expect(titles).toContain("Farmers market");
@@ -66,5 +66,8 @@ describe("calendar ICS parsing", () => {
 
     const todayEvents = days[0]!.events.map((e) => e.title);
     expect(todayEvents).toContain("Farmers market");
+
+    // Weekdays after tomorrow are date-first: "9/15 · Mon"
+    expect(days[2]!.label).toMatch(/^\d{1,2}\/\d{1,2} · \w{3}$/);
   });
 });

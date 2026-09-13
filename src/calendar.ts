@@ -71,9 +71,10 @@ function dayLabelFor(
 ): string {
   const dt = DateTime.fromISO(dayKey, { zone });
   const datePart = dt.toFormat("M/d");
-  if (dayKey === todayKey) return `Today · ${datePart}`;
-  if (dayKey === tomorrowKey) return `Tomorrow · ${datePart}`;
-  return dt.toFormat("ccc M/d");
+  // Date first for e-ink scan: "9/13 · Today", "9/15 · Mon"
+  if (dayKey === todayKey) return `${datePart} · Today`;
+  if (dayKey === tomorrowKey) return `${datePart} · Tomorrow`;
+  return `${datePart} · ${dt.toFormat("ccc")}`;
 }
 
 function timeLabelFor(

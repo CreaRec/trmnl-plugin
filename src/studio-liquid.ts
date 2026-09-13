@@ -70,10 +70,13 @@ export function weatherSizeMetrics(
   );
   const tempEm =
     Math.round(Math.min(desired, tempFromWidth) * 100) / 100;
+  // Condition/range line uses title/value scale (not tiny label) for BWRY e-ink
   const metaEm =
     Math.round(
-      Math.min(1.1, Math.max(0.55, 0.5 + short * 0.07 + Math.max(0, hh - 2) * 0.05)) *
-        100,
+      Math.min(
+        1.35,
+        Math.max(0.85, 0.78 + short * 0.08 + Math.max(0, hh - 2) * 0.06),
+      ) * 100,
     ) / 100;
   return { iconPx, tempEm, gapPx, metaEm };
 }
@@ -110,11 +113,11 @@ function weatherSnippet(
       src="{{ ${prefix}.icon | default: 'https://trmnl.com/images/plugins/weather/wi-na.svg' }}"
     >
     <div class="creafridge-weather__text">
+      <span class="title creafridge-weather__meta">
+        {{ ${prefix}.condition | default: "—" }}{% if ${prefix}.low_c and ${prefix}.high_c %} · {{ ${prefix}.low_c | round }}° / {{ ${prefix}.high_c | round }}°{% endif %}
+      </span>
       <span class="value creafridge-weather__temp">
         ${tempLiquid}
-      </span>
-      <span class="label creafridge-weather__meta">
-        {{ ${prefix}.condition | default: "—" }}{% if ${prefix}.low_c and ${prefix}.high_c %} · {{ ${prefix}.low_c | round }}° / {{ ${prefix}.high_c | round }}°{% endif %}
       </span>
     </div>
   </div>
@@ -278,11 +281,16 @@ export const CREAFRIDGE_BLOCK_CSS = `
     object-fit: contain !important;
   }
   .creafridge-weather__meta {
-    font-size: var(--cf-meta, 0.85em);
+    font-size: var(--cf-meta, 1em) !important;
+    line-height: 1.15 !important;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .creafridge-weather .creafridge-weather__meta.title,
+  .creafridge-weather span.creafridge-weather__meta {
+    font-size: var(--cf-meta, 1em) !important;
   }
   .creafridge-weather--tall .creafridge-weather__body {
     grid-template-columns: 1fr;
@@ -348,6 +356,7 @@ export const CREAFRIDGE_BLOCK_CSS = `
     flex-direction: column;
     gap: 1px;
     min-width: 0;
+    width: 100%;
     text-align: left;
     justify-self: stretch;
   }
