@@ -142,13 +142,19 @@ function batterySnippet(): string {
 </div>`;
 }
 
-/** Red trash when waste.active; otherwise empty outlined 1×1 cell. */
+/** Red waste icon when waste.active (trash vs recycle by kind); else empty 1×1 cell. */
 function trashSnippet(): string {
   return `<div class="outline rounded--medium creafridge-trash-cell" style="height:100%;box-sizing:border-box;overflow:hidden;">
   {% if waste.active %}
-    <svg class="creafridge-trash text--red" viewBox="0 0 16 16" preserveAspectRatio="xMidYMid meet" aria-label="{{ waste.label | default: 'Waste' }}" role="img">
-      <path fill="currentColor" d="M6 1h4l.5 1.5H14v1.5H2V2.5h3.5L6 1zm1 4h1.5v7H7V5zm3 0H11.5v7H10V5zM4.5 5H6v7H4.5V5zM3 13.5h10V15H3v-1.5z"/>
-    </svg>
+    {% if waste.kind == "trash_recycle" %}
+      <svg class="creafridge-trash text--red" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" aria-label="{{ waste.label | default: 'Waste' }}" role="img">
+        <path fill="currentColor" d="M5.77 7.15 7.2 4.78l1.03-1.71c.39-.65 1.33-.65 1.72 0l1.48 2.46-1.23 2.06-1 1.62-3.43-2.06zm15.95 5.82-1.6-2.66-3.46 2L18.87 16H20a2 2 0 0 0 2-2c0-.36-.1-.71-.28-1.03zM16 21h1.5a2 2 0 0 0 1.79-1.11L20.74 17H16v-2l-4 4 4 4v-2zm-6-4H5.7l-.84 1.41c-.3.5-.32 1.12-.06 1.65.28.57.87.94 1.52.94H10v-4zm-3.88-2.65 1.73 1.04L6.48 9.9 1 11.27l1.7 1.02-.41.69c-.35.59-.38 1.31-.07 1.92l1.63 3.26 2.27-3.81zm10.9-9.21-1.3-2.17C15.35 2.37 14.7 2 14 2h-3.53l3.12 5.2-1.72 1.03 5.49 1.37 1.37-5.49-1.71 1.03z"/>
+      </svg>
+    {% else %}
+      <svg class="creafridge-trash text--red" viewBox="0 0 16 16" preserveAspectRatio="xMidYMid meet" aria-label="{{ waste.label | default: 'Waste' }}" role="img">
+        <path fill="currentColor" d="M6 1h4l.5 1.5H14v1.5H2V2.5h3.5L6 1zm1 4h1.5v7H7V5zm3 0H11.5v7H10V5zM4.5 5H6v7H4.5V5zM3 13.5h10V15H3v-1.5z"/>
+      </svg>
+    {% endif %}
   {% endif %}
 </div>`;
 }

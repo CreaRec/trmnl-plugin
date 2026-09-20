@@ -140,6 +140,8 @@ describe("studio routes", () => {
     expect(js).toContain("creafridge-battery");
     expect(js).toContain("creafridge-battery-cell");
     expect(js).toContain("creafridge-trash-cell");
+    expect(js).toContain("trash_recycle");
+    expect(js).toContain('viewBox="0 0 24 24"');
     expect(js).toContain("creafridge-calendar");
     expect(js).toContain("creafridge-calendar__list");
     expect(js).toContain("text--red");
