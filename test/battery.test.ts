@@ -87,6 +87,10 @@ describe("renderStudioLiquid weather + battery/trash", () => {
     expect(liquid).toMatch(/creafridge-battery__seg/);
     expect(liquid).toMatch(/creafridge-battery-cell/);
     expect(liquid).toMatch(/creafridge-trash-cell/);
+    expect(liquid).toMatch(/waste\.kind == "trash_recycle"/);
+    expect(liquid).toMatch(/viewBox="0 0 24 24"/);
+    expect(liquid).toMatch(/M5\.77 7\.15/);
+    expect(liquid).toMatch(/M6 1h4l\.5 1\.5H14/);
     expect(liquid).toMatch(/cf_batt_segs/);
     expect(liquid).not.toMatch(/Status · Battery \+ Waste/);
     expect(liquid).not.toMatch(/value--xsmall">Battery/);

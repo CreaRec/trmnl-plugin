@@ -195,6 +195,7 @@ describe("studio-layout v2", () => {
     expect(liquid).toMatch(/creafridge-weather--wide/);
     expect(liquid).toMatch(/creafridge-battery-cell/);
     expect(liquid).toMatch(/creafridge-trash-cell/);
+    expect(liquid).toMatch(/waste\.kind == "trash_recycle"/);
     expect(liquid).toMatch(/creafridge-calendar/);
     expect(liquid).toMatch(/grid-template-columns:\s*auto 1fr/);
     expect(liquid).not.toMatch(/Calendar · 7 days/);
