@@ -2,6 +2,10 @@ import { loadConfig, type AppConfig } from "./config.js";
 import { fetchCalendar, type CalendarDay, type CalendarEvent } from "./calendar.js";
 import { fetchWeather, type WeatherPayload } from "./weather.js";
 import { getWasteInfo, type WasteInfo } from "./waste.js";
+import {
+  fetchShopping,
+  type ShoppingPayload,
+} from "./todoist.js";
 
 export type PollPayload = {
   title: string;
@@ -11,6 +15,7 @@ export type PollPayload = {
   waste: WasteInfo;
   events: CalendarEvent[];
   days: CalendarDay[];
+  shopping: ShoppingPayload;
 };
 
 export const SERVICE_NAME = "trmnl-plugin";
@@ -23,6 +28,7 @@ export type BuildPollOptions = {
   icsText?: string;
   weatherFetch?: typeof fetch;
   calendarFetch?: typeof fetch;
+  shoppingFetch?: typeof fetch;
 };
 
 /** Live fridge dashboard JSON for TRMNL Private Plugin Liquid. */
@@ -32,7 +38,7 @@ export async function buildPollPayload(
   const config = options.config ?? loadConfig();
   const now = options.now ?? new Date();
 
-  const [weather, calendar] = await Promise.all([
+  const [weather, calendar, shopping] = await Promise.all([
     fetchWeather({
       lat: config.weatherLat,
       lon: config.weatherLon,
@@ -49,6 +55,12 @@ export async function buildPollPayload(
       icsText: options.icsText,
       fetchImpl: options.calendarFetch,
     }),
+    fetchShopping({
+      token: config.todoistApiToken,
+      projectId: config.todoistProjectId,
+      cacheMs: config.shoppingCacheMs,
+      fetchImpl: options.shoppingFetch,
+    }),
   ]);
 
   return {
@@ -59,6 +71,7 @@ export async function buildPollPayload(
     waste: getWasteInfo(now, config.weatherTz),
     events: calendar.events,
     days: calendar.days,
+    shopping,
   };
 }
 

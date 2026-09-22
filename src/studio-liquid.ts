@@ -4,6 +4,7 @@ import {
   GRID_ROWS,
   SCREEN_HEIGHT_PX,
   SCREEN_WIDTH_PX,
+  isBlockEnabled,
 } from "./studio-layout.js";
 
 /**
@@ -191,6 +192,26 @@ function calendarSnippet(): string {
 </div>`;
 }
 
+/** Read-only shopping list for e-ink Full (complete via Studio / Todoist app). */
+function shoppingSnippet(): string {
+  return `<div class="outline rounded--medium creafridge-shopping" style="height:100%;box-sizing:border-box;overflow:hidden;">
+  <span class="label creafridge-shopping__title">{{ shopping.label | default: "Shopping" }}</span>
+  {% if shopping.items and shopping.items.size > 0 %}
+    <div class="creafridge-shopping__list">
+      {% for item in shopping.items %}
+        <span class="title title--small creafridge-shopping__item">• {{ item.content }}</span>
+      {% endfor %}
+    </div>
+  {% elsif shopping.configured == false %}
+    <span class="description">Set TODOIST_API_TOKEN</span>
+  {% elsif shopping.error %}
+    <span class="description">—</span>
+  {% else %}
+    <span class="description">—</span>
+  {% endif %}
+</div>`;
+}
+
 function blockSnippet(block: LayoutBlock): string {
   switch (block.id) {
     case "weather_today":
@@ -209,6 +230,8 @@ function blockSnippet(block: LayoutBlock): string {
       return trashSnippet();
     case "calendar":
       return calendarSnippet();
+    case "shopping":
+      return shoppingSnippet();
     default:
       return "";
   }
@@ -387,16 +410,45 @@ export const CREAFRIDGE_BLOCK_CSS = `
     text-align: left;
     justify-self: stretch;
   }
+  .creafridge-shopping {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+    align-items: stretch;
+    min-width: 0;
+    min-height: 0;
+    padding: 4px;
+    gap: 2px;
+    box-sizing: border-box;
+  }
+  .creafridge-shopping__title { flex: 0 0 auto; text-align: left; }
+  .creafridge-shopping__list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+    width: 100%;
+  }
+  .creafridge-shopping__item {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 `.trim();
 
 /**
  * Paste-ready Full markup: CSS grid placements from Studio layout.
- * No studio-* classes. Includes a short comment that layout came from Studio.
+ * Disabled blocks are omitted. No studio-* classes.
  */
 export function renderStudioLiquid(layout: StudioLayout): string {
   const cols = layout.grid?.cols ?? GRID_COLS;
   const rows = layout.grid?.rows ?? GRID_ROWS;
   const cells = layout.blocks
+    .filter(isBlockEnabled)
     .map((block) => {
       const snippet = blockSnippet(block);
       if (!snippet) return "";

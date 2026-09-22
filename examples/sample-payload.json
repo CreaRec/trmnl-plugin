@@ -122,5 +122,15 @@
         }
       ]
     }
-  ]
+  ],
+  "shopping": {
+    "project_id": "6hc3F4VwmP24XJCM",
+    "label": "Shopping",
+    "items": [
+      { "id": "6cABC123", "content": "Milk", "order": 1 },
+      { "id": "6cDEF456", "content": "Eggs", "order": 2 }
+    ],
+    "configured": true,
+    "error": null
+  }
 }

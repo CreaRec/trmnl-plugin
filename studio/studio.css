@@ -87,6 +87,34 @@ body {
   font-weight: 700;
 }
 
+.studio-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.85rem;
+  margin: 0 0 0.85rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid rgba(42, 42, 40, 0.22);
+  background: rgba(243, 239, 228, 0.65);
+}
+
+.studio-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  user-select: none;
+}
+
+.studio-toggle input {
+  width: 0.95rem;
+  height: 0.95rem;
+  accent-color: var(--ink);
+  cursor: pointer;
+}
+
 .studio-actions {
   display: flex;
   flex-wrap: wrap;
@@ -470,6 +498,73 @@ html.has-trmnl-css .studio-screen {
   width: 100%;
   text-align: left;
   justify-self: stretch;
+}
+
+.creafridge-shopping {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  align-items: stretch;
+  min-width: 0;
+  min-height: 0;
+  padding: 4px;
+  gap: 2px;
+  box-sizing: border-box;
+}
+
+.creafridge-shopping__title {
+  flex: 0 0 auto;
+  text-align: left;
+}
+
+.creafridge-shopping__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  width: 100%;
+}
+
+.creafridge-shopping__row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.creafridge-shopping__item {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.creafridge-shopping__buy {
+  appearance: none;
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  background: var(--chrome);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.15rem 0.3rem;
+  cursor: pointer;
+  border-radius: 2px;
+}
+
+.creafridge-shopping__buy:hover {
+  background: #fffaf0;
+}
+
+.creafridge-shopping__buy:disabled {
+  opacity: 0.5;
+  cursor: wait;
 }
 
 .studio-block__resize {

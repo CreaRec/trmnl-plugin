@@ -14,6 +14,7 @@ const BLOCK_IDS = [
   "battery",
   "trash",
   "calendar",
+  "shopping",
 ];
 
 const LABELS = {
@@ -22,10 +23,19 @@ const LABELS = {
   battery: "Battery",
   trash: "Waste",
   calendar: "Calendar",
+  shopping: "Shopping",
 };
 
-/** @typedef {{ id: string, x: number, y: number, w: number, h: number }} LayoutBlock */
+/** @typedef {{ id: string, x: number, y: number, w: number, h: number, enabled?: boolean }} LayoutBlock */
 /** @typedef {{ version: number, updated_at: string, grid: { cols: number, rows: number }, blocks: LayoutBlock[] }} StudioLayout */
+
+function defaultEnabledFor(id) {
+  return id !== "shopping";
+}
+
+function isBlockEnabled(block) {
+  return block && block.enabled !== false;
+}
 
 function minSizeFor(id) {
   if (id === "battery" || id === "trash") return { w: 1, h: 1 };
@@ -39,11 +49,12 @@ function fixedSizeFor(id) {
 
 function defaultBlockRects() {
   return [
-    { id: "weather_today", x: 0, y: 0, w: 4, h: 3 },
-    { id: "weather_tomorrow", x: 4, y: 0, w: 4, h: 3 },
-    { id: "battery", x: 11, y: 0, w: 1, h: 1 },
-    { id: "trash", x: 10, y: 0, w: 1, h: 1 },
-    { id: "calendar", x: 0, y: 4, w: 12, h: 4 },
+    { id: "weather_today", x: 0, y: 0, w: 4, h: 3, enabled: true },
+    { id: "weather_tomorrow", x: 4, y: 0, w: 4, h: 3, enabled: true },
+    { id: "battery", x: 11, y: 0, w: 1, h: 1, enabled: true },
+    { id: "trash", x: 10, y: 0, w: 1, h: 1, enabled: true },
+    { id: "calendar", x: 0, y: 4, w: 12, h: 4, enabled: true },
+    { id: "shopping", x: 8, y: 0, w: 2, h: 3, enabled: false },
   ];
 }
 
@@ -81,7 +92,11 @@ function rectsOverlap(a, b) {
 
 function wouldOverlap(blocks, candidate, skipId) {
   return blocks.some(
-    (b) => b.id !== skipId && rectsOverlap(candidate, b),
+    (b) =>
+      b.id !== skipId &&
+      isBlockEnabled(b) &&
+      isBlockEnabled(candidate) &&
+      rectsOverlap(candidate, b),
   );
 }
 
@@ -102,6 +117,10 @@ function layoutUrl() {
 
 function liquidUrl() {
   return `${studioRootPath()}/liquid`;
+}
+
+function shoppingCompleteUrl() {
+  return `${studioRootPath()}/shopping/complete`;
 }
 
 function setStatus(message, tone = "") {
@@ -146,7 +165,14 @@ function migrateV1Blocks(v1Blocks) {
   const seen = new Set();
   for (const b of v1Blocks) {
     if (b && BLOCK_IDS.includes(b.id) && !seen.has(b.id)) {
-      ordered.push(byId.get(b.id));
+      const base = byId.get(b.id);
+      ordered.push({
+        ...base,
+        enabled:
+          typeof b.enabled === "boolean"
+            ? b.enabled
+            : defaultEnabledFor(b.id),
+      });
       seen.add(b.id);
     }
   }
@@ -188,15 +214,20 @@ function normalizeLayout(raw) {
           },
           b.id,
         );
-        byId.set(b.id, { id: b.id, ...rect });
+        const enabled =
+          typeof b.enabled === "boolean"
+            ? b.enabled
+            : defaultEnabledFor(b.id);
+        byId.set(b.id, { id: b.id, ...rect, enabled });
       }
     }
     blocks = BLOCK_IDS.map((id) => byId.get(id));
-    // If overlaps after clamp, fall back to defaults
+    // If overlaps among enabled blocks after clamp, fall back to defaults
     let overlap = false;
-    for (let i = 0; i < blocks.length && !overlap; i++) {
-      for (let j = i + 1; j < blocks.length; j++) {
-        if (rectsOverlap(blocks[i], blocks[j])) {
+    const active = blocks.filter(isBlockEnabled);
+    for (let i = 0; i < active.length && !overlap; i++) {
+      for (let j = i + 1; j < active.length; j++) {
+        if (rectsOverlap(active[i], active[j])) {
           overlap = true;
           break;
         }
@@ -484,6 +515,36 @@ function calendarCardHtml(poll) {
     </div>`;
 }
 
+function shoppingCardHtml(poll) {
+  const shopping = poll?.shopping;
+  const label = shopping?.label || LABELS.shopping;
+  const items = Array.isArray(shopping?.items) ? shopping.items : [];
+  let body;
+  if (items.length > 0) {
+    body = items
+      .map(
+        (item) => `
+        <div class="creafridge-shopping__row">
+          <span class="title title--small creafridge-shopping__item">• ${esc(item.content || "")}</span>
+          <button type="button" class="creafridge-shopping__buy" data-shopping-id="${esc(item.id)}" title="Mark bought">✓</button>
+        </div>`,
+      )
+      .join("");
+  } else if (shopping && shopping.configured === false) {
+    body = `<span class="description">Set TODOIST_API_TOKEN</span>`;
+  } else {
+    body = `<span class="description">—</span>`;
+  }
+
+  return `
+    <div class="outline rounded--medium studio-block__card creafridge-shopping">
+      <span class="label creafridge-shopping__title">${esc(label)}</span>
+      <div class="creafridge-shopping__list">
+        ${body}
+      </div>
+    </div>`;
+}
+
 function blockCardHtml(block, poll) {
   switch (block.id) {
     case "weather_today":
@@ -503,6 +564,8 @@ function blockCardHtml(block, poll) {
       return trashCardHtml(poll);
     case "calendar":
       return calendarCardHtml(poll);
+    case "shopping":
+      return shoppingCardHtml(poll);
     default:
       return "";
   }
@@ -511,6 +574,53 @@ function blockCardHtml(block, poll) {
 function applyBlockPlacement(el, block) {
   el.style.gridColumn = `${block.x + 1} / span ${block.w}`;
   el.style.gridRow = `${block.y + 1} / span ${block.h}`;
+}
+
+function renderWidgetToggles() {
+  const host = document.getElementById("widget-toggles");
+  if (!host) return;
+  host.innerHTML = "";
+  for (const id of BLOCK_IDS) {
+    const block = state.layout.blocks.find((b) => b.id === id);
+    if (!block) continue;
+    const label = document.createElement("label");
+    label.className = "studio-toggle";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = isBlockEnabled(block);
+    input.dataset.blockId = id;
+    input.addEventListener("change", () => {
+      void setBlockEnabled(id, input.checked);
+    });
+    const span = document.createElement("span");
+    span.textContent = LABELS[id] || id;
+    label.appendChild(input);
+    label.appendChild(span);
+    host.appendChild(label);
+  }
+}
+
+function setBlockEnabled(id, enabled) {
+  const blocks = state.layout.blocks.map((b) => ({ ...b }));
+  const idx = blocks.findIndex((b) => b.id === id);
+  if (idx < 0) return;
+  const next = { ...blocks[idx], enabled: Boolean(enabled) };
+  if (next.enabled && wouldOverlap(blocks, next, id)) {
+    setStatus(
+      `Cannot enable ${LABELS[id] || id}: overlaps another widget — move or resize first`,
+      "err",
+    );
+    renderWidgetToggles();
+    return;
+  }
+  blocks[idx] = next;
+  state.layout = saveLocal({ ...state.layout, blocks });
+  scheduleAutoSync();
+  setStatus(
+    `${LABELS[id] || id} ${next.enabled ? "enabled" : "disabled"}`,
+    "ok",
+  );
+  render();
 }
 
 function renderTitleBar() {
@@ -535,6 +645,7 @@ function render() {
     body.style.gridTemplateRows = `repeat(${GRID_ROWS}, 1fr)`;
 
     for (const block of state.layout.blocks) {
+      if (!isBlockEnabled(block)) continue;
       const wrap = document.createElement("div");
       wrap.className = "studio-block";
       wrap.dataset.blockId = block.id;
@@ -553,10 +664,15 @@ function render() {
       wrap
         .querySelector("[data-resize]")
         ?.addEventListener("pointerdown", onResizePointerDown);
+      wrap.querySelectorAll("[data-shopping-id]").forEach((btn) => {
+        btn.addEventListener("pointerdown", (ev) => ev.stopPropagation());
+        btn.addEventListener("click", onShoppingBuyClick);
+      });
       body.appendChild(wrap);
     }
   }
 
+  renderWidgetToggles();
   renderTitleBar();
 
   const screen = document.getElementById("screen");
@@ -592,7 +708,12 @@ function updateBlockRect(id, nextRect, { commit = false } = {}) {
   const blocks = state.layout.blocks.map((b) => ({ ...b }));
   const idx = blocks.findIndex((b) => b.id === id);
   if (idx < 0) return false;
-  const clamped = { id, ...clampRect(nextRect, id) };
+  const prev = blocks[idx];
+  const clamped = {
+    id,
+    ...clampRect(nextRect, id),
+    enabled: isBlockEnabled(prev),
+  };
   if (wouldOverlap(blocks, clamped, id)) {
     return false;
   }
@@ -760,6 +881,35 @@ async function fetchPoll() {
   state.poll = await res.json();
   render();
   setStatus(`Poll loaded · ${state.poll.updated_at || "ok"}`, "ok");
+}
+
+async function onShoppingBuyClick(ev) {
+  ev.preventDefault();
+  ev.stopPropagation();
+  const btn = ev.currentTarget;
+  if (!(btn instanceof HTMLElement)) return;
+  const id = btn.dataset.shoppingId;
+  if (!id) return;
+  btn.disabled = true;
+  try {
+    const res = await fetch(shoppingCompleteUrl(), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ id }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `complete HTTP ${res.status}`);
+    }
+    setStatus("Marked bought in Todoist", "ok");
+    await fetchPoll();
+  } catch (e) {
+    btn.disabled = false;
+    setStatus(e instanceof Error ? e.message : "complete failed", "err");
+  }
 }
 
 async function syncToServer({ quiet = false } = {}) {

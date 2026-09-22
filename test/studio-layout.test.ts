@@ -7,6 +7,7 @@ import {
   defaultStudioLayout,
   expandLegacyStatusBlocks,
   fixedSizeFor,
+  isBlockEnabled,
   migrateV1BlocksToV2,
   minSizeFor,
   rectsOverlap,
@@ -15,21 +16,25 @@ import {
 import { renderStudioLiquid } from "../src/studio-liquid.js";
 
 describe("studio-layout v2", () => {
-  it("default layout is v2 with 12×8 grid and battery+trash 1×1", () => {
+  it("default layout is v2 with shopping disabled by default", () => {
     const layout = defaultStudioLayout();
     expect(layout.version).toBe(STUDIO_LAYOUT_VERSION);
     expect(layout.version).toBe(2);
     expect(layout.grid).toEqual({ cols: GRID_COLS, rows: GRID_ROWS });
     expect(layout.blocks).toEqual([
-      { id: "weather_today", x: 0, y: 0, w: 4, h: 3 },
-      { id: "weather_tomorrow", x: 4, y: 0, w: 4, h: 3 },
-      { id: "battery", x: 11, y: 0, w: 1, h: 1 },
-      { id: "trash", x: 10, y: 0, w: 1, h: 1 },
-      { id: "calendar", x: 0, y: 4, w: 12, h: 4 },
+      { id: "weather_today", x: 0, y: 0, w: 4, h: 3, enabled: true },
+      { id: "weather_tomorrow", x: 4, y: 0, w: 4, h: 3, enabled: true },
+      { id: "battery", x: 11, y: 0, w: 1, h: 1, enabled: true },
+      { id: "trash", x: 10, y: 0, w: 1, h: 1, enabled: true },
+      { id: "calendar", x: 0, y: 4, w: 12, h: 4, enabled: true },
+      { id: "shopping", x: 8, y: 0, w: 2, h: 3, enabled: false },
     ]);
+    expect(isBlockEnabled(layout.blocks.find((b) => b.id === "shopping")!)).toBe(
+      false,
+    );
   });
 
-  it("migrates v1 half/full to default cell rects", () => {
+  it("migrates v1 half/full to default cell rects and fills shopping", () => {
     const migrated = migrateV1BlocksToV2([
       { id: "calendar", width: "full" },
       { id: "battery", width: "full" },
@@ -43,18 +48,17 @@ describe("studio-layout v2", () => {
       "trash",
       "weather_today",
       "weather_tomorrow",
+      "shopping",
     ]);
     expect(migrated.find((b) => b.id === "weather_today")).toMatchObject({
       x: 0,
       y: 0,
       w: 4,
       h: 3,
+      enabled: true,
     });
-    expect(migrated.find((b) => b.id === "battery")).toMatchObject({
-      x: 11,
-      y: 0,
-      w: 1,
-      h: 1,
+    expect(migrated.find((b) => b.id === "shopping")).toMatchObject({
+      enabled: false,
     });
   });
 
@@ -86,7 +90,7 @@ describe("studio-layout v2", () => {
     });
   });
 
-  it("validateStudioLayout upgrades v1 status payload to battery+trash", () => {
+  it("validateStudioLayout upgrades v1 status payload to battery+trash+shopping", () => {
     const layout = validateStudioLayout({
       version: 1,
       blocks: [
@@ -105,8 +109,33 @@ describe("studio-layout v2", () => {
       "battery",
       "trash",
       "calendar",
+      "shopping",
     ]);
-    expect(layout.blocks.every((b) => "x" in b && "w" in b)).toBe(true);
+    expect(layout.blocks.every((b) => "x" in b && "w" in b && "enabled" in b)).toBe(
+      true,
+    );
+    expect(layout.blocks.find((b) => b.id === "shopping")?.enabled).toBe(false);
+  });
+
+  it("auto-fills missing shopping on older v2 layouts", () => {
+    const layout = validateStudioLayout({
+      version: 2,
+      blocks: [
+        { id: "weather_today", x: 0, y: 0, w: 4, h: 3 },
+        { id: "weather_tomorrow", x: 4, y: 0, w: 4, h: 3 },
+        { id: "battery", x: 11, y: 0, w: 1, h: 1 },
+        { id: "trash", x: 10, y: 0, w: 1, h: 1 },
+        { id: "calendar", x: 0, y: 4, w: 12, h: 4 },
+      ],
+    });
+    expect(layout.blocks.map((b) => b.id)).toContain("shopping");
+    expect(layout.blocks.find((b) => b.id === "shopping")).toMatchObject({
+      enabled: false,
+      x: 8,
+      y: 0,
+      w: 2,
+      h: 3,
+    });
   });
 
   it("locks battery/trash to 1×1 when larger rects are submitted", () => {
@@ -153,19 +182,36 @@ describe("studio-layout v2", () => {
     });
   });
 
-  it("rejects overlapping v2 blocks", () => {
+  it("rejects overlapping enabled v2 blocks", () => {
     expect(() =>
       validateStudioLayout({
         version: 2,
         blocks: [
-          { id: "weather_today", x: 0, y: 0, w: 6, h: 3 },
-          { id: "weather_tomorrow", x: 4, y: 0, w: 6, h: 3 },
-          { id: "battery", x: 0, y: 3, w: 1, h: 1 },
-          { id: "trash", x: 1, y: 3, w: 1, h: 1 },
-          { id: "calendar", x: 0, y: 4, w: 12, h: 4 },
+          { id: "weather_today", x: 0, y: 0, w: 6, h: 3, enabled: true },
+          { id: "weather_tomorrow", x: 4, y: 0, w: 6, h: 3, enabled: true },
+          { id: "battery", x: 0, y: 3, w: 1, h: 1, enabled: true },
+          { id: "trash", x: 1, y: 3, w: 1, h: 1, enabled: true },
+          { id: "calendar", x: 0, y: 4, w: 12, h: 4, enabled: true },
+          { id: "shopping", x: 8, y: 0, w: 2, h: 3, enabled: false },
         ],
       }),
     ).toThrow(/overlap/);
+  });
+
+  it("allows disabled blocks to share cells with enabled ones", () => {
+    const layout = validateStudioLayout({
+      version: 2,
+      blocks: [
+        { id: "weather_today", x: 0, y: 0, w: 4, h: 3, enabled: true },
+        { id: "weather_tomorrow", x: 4, y: 0, w: 4, h: 3, enabled: true },
+        { id: "battery", x: 11, y: 0, w: 1, h: 1, enabled: true },
+        { id: "trash", x: 10, y: 0, w: 1, h: 1, enabled: true },
+        { id: "calendar", x: 0, y: 4, w: 12, h: 4, enabled: true },
+        // Overlaps weather_today but disabled — OK
+        { id: "shopping", x: 0, y: 0, w: 2, h: 3, enabled: false },
+      ],
+    });
+    expect(layout.blocks.find((b) => b.id === "shopping")?.enabled).toBe(false);
   });
 
   it("rectsOverlap detects shared cells", () => {
@@ -183,7 +229,7 @@ describe("studio-layout v2", () => {
     ).toBe(true);
   });
 
-  it("renderStudioLiquid includes grid markers and no studio-* classes", () => {
+  it("renderStudioLiquid omits disabled shopping and includes grid markers", () => {
     const liquid = renderStudioLiquid(defaultStudioLayout());
     expect(liquid).toMatch(/creafridge-grid/);
     expect(liquid).toMatch(/grid-template-columns:\s*repeat\(12/);
@@ -202,5 +248,18 @@ describe("studio-layout v2", () => {
     expect(liquid).not.toMatch(/grid--cols-4/);
     expect(liquid).toMatch(/text--red/);
     expect(liquid).not.toMatch(/creafridge-status/);
+    // Shopping disabled by default → no shopping Liquid bindings in the grid
+    expect(liquid).not.toMatch(/shopping\.items/);
+    expect(liquid).not.toMatch(/shopping\.label/);
+    expect(liquid).not.toMatch(/Set TODOIST_API_TOKEN/);
+  });
+
+  it("renderStudioLiquid includes shopping when enabled", () => {
+    const layout = defaultStudioLayout();
+    const shopping = layout.blocks.find((b) => b.id === "shopping")!;
+    shopping.enabled = true;
+    const liquid = renderStudioLiquid(layout);
+    expect(liquid).toMatch(/shopping\.items/);
+    expect(liquid).toMatch(/shopping\.label/);
   });
 });

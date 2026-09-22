@@ -92,6 +92,10 @@ describe("studio routes", () => {
       expect(body.waste).toBeTypeOf("object");
       expect(Array.isArray(body.events)).toBe(true);
       expect(Array.isArray(body.days)).toBe(true);
+      expect(body.shopping).toBeTypeOf("object");
+      const shopping = body.shopping as { configured: boolean; items: unknown[] };
+      expect(shopping.configured).toBe(false);
+      expect(Array.isArray(shopping.items)).toBe(true);
       // Preview-only TRMNL device vars (not on authorized /poll)
       expect(body.trmnl).toEqual({
         device: { percent_charged: 100 },
@@ -126,6 +130,7 @@ describe("studio routes", () => {
     expect(html).toMatch(/screen--og/);
     expect(html).toMatch(/view view--full/);
     expect(html).toMatch(/btn-export-liquid/);
+    expect(html).toMatch(/id="widget-toggles"/);
     expect(html).not.toMatch(/id="block-rail"/);
     expect(html).not.toMatch(/id="block-list"/);
 
@@ -144,6 +149,10 @@ describe("studio routes", () => {
     expect(js).toContain('viewBox="0 0 24 24"');
     expect(js).toContain("creafridge-calendar");
     expect(js).toContain("creafridge-calendar__list");
+    expect(js).toContain("creafridge-shopping");
+    expect(js).toContain("isBlockEnabled");
+    expect(js).toContain("setBlockEnabled");
+    expect(js).toContain("shopping/complete");
     expect(js).toContain("text--red");
     expect(js).not.toContain("grid--cols-4");
     expect(js).not.toContain("col--span-3");
@@ -151,6 +160,7 @@ describe("studio routes", () => {
     expect(js).toContain("fixedSizeFor");
     expect(js).toContain('"battery"');
     expect(js).toContain('"trash"');
+    expect(js).toContain('"shopping"');
     expect(js).toContain("expandLegacyStatusBlocks");
     expect(js).not.toMatch(/BLOCK_IDS = \[[^\]]*"status"/s);
     expect(js).not.toContain("Status · Battery + Waste");
@@ -217,6 +227,7 @@ describe("studio routes", () => {
       "trash",
       "weather_today",
       "weather_tomorrow",
+      "shopping",
     ]);
     expect(saved.blocks.find((b) => b.id === "weather_today")).toMatchObject({
       x: 0,
@@ -225,6 +236,9 @@ describe("studio routes", () => {
     expect(saved.blocks.find((b) => b.id === "battery")).toMatchObject({
       w: 1,
       h: 1,
+    });
+    expect(saved.blocks.find((b) => b.id === "shopping")).toMatchObject({
+      enabled: false,
     });
     expect(saved.updated_at).toBeTypeOf("string");
 
@@ -262,7 +276,7 @@ describe("studio routes", () => {
     });
     expect(put.status).toBe(200);
     const saved = (await put.json()) as {
-      blocks: { id: string; x: number; w: number }[];
+      blocks: { id: string; x: number; w: number; enabled?: boolean }[];
     };
     expect(saved.blocks.find((b) => b.id === "battery")).toMatchObject({
       x: 8,
@@ -271,6 +285,10 @@ describe("studio routes", () => {
     expect(saved.blocks.find((b) => b.id === "trash")).toMatchObject({
       x: 9,
       w: 1,
+    });
+    expect(saved.blocks.map((b) => b.id)).toContain("shopping");
+    expect(saved.blocks.find((b) => b.id === "shopping")).toMatchObject({
+      enabled: false,
     });
 
     const get = await fetch(`${base}/studio/layout`);
@@ -353,15 +371,37 @@ describe("studio routes", () => {
       body: JSON.stringify({
         version: 2,
         blocks: [
-          { id: "weather_today", x: 0, y: 0, w: 8, h: 3 },
-          { id: "weather_tomorrow", x: 4, y: 0, w: 6, h: 3 },
-          { id: "battery", x: 0, y: 3, w: 1, h: 1 },
-          { id: "trash", x: 1, y: 3, w: 1, h: 1 },
-          { id: "calendar", x: 0, y: 4, w: 12, h: 4 },
+          { id: "weather_today", x: 0, y: 0, w: 8, h: 3, enabled: true },
+          { id: "weather_tomorrow", x: 4, y: 0, w: 6, h: 3, enabled: true },
+          { id: "battery", x: 0, y: 3, w: 1, h: 1, enabled: true },
+          { id: "trash", x: 1, y: 3, w: 1, h: 1, enabled: true },
+          { id: "calendar", x: 0, y: 4, w: 12, h: 4, enabled: true },
+          { id: "shopping", x: 8, y: 0, w: 2, h: 3, enabled: false },
         ],
       }),
     });
     expect(res.status).toBe(400);
+  });
+
+  it("POST /studio/shopping/complete requires token and valid id", async () => {
+    const base = await listen();
+    const missing = await fetch(`${base}/studio/shopping/complete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: "abc" }),
+    });
+    expect(missing.status).toBe(503);
+    expect(await missing.json()).toMatchObject({
+      error: "todoist_not_configured",
+    });
+
+    const badId = await fetch(`${base}/studio/shopping/complete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: "bad id!" }),
+    });
+    // Still 503 when token missing (checked first) — with token would be 400
+    expect([400, 503]).toContain(badId.status);
   });
 
   it("OPTIONS allows PUT/POST for studio layout", async () => {
