@@ -59,7 +59,7 @@ Public poll is tokenized at `https://crearec.app/trmnl/<uuid>` (TRMNL Polling). 
 - **Battery** and **trash** are fixed `1×1` icon cells; SVGs stretch to nearly fill the cell (tiny padding), centered.
 - **Battery** always shows the 4-segment icon (`trmnl.device.percent_charged`). **Trash** shows the red icon only when `waste.active`; otherwise an empty outlined cell.
 - Calendar has **no header**; **Today** uses `text--red`; day labels are date-first (e.g. `9/12 · Today`, `9/15 · Mon`); tight **2-column** grid (`max-content` + `1fr`), both columns left-aligned; events column fills remaining width.
-- **Shopping** lists active Todoist tasks from project «Покупки» (`TODOIST_PROJECT_ID`, default `6hc3F4VwmP24XJCM`). Studio can mark an item bought (`POST /studio/shopping/complete`); e-ink Full is read-only.
+- **Shopping** lists active Todoist tasks from project «Покупки» (`TODOIST_PROJECT_ID`, default `6hc3F4VwmP24XJCM`) via [Todoist API v1](https://developer.todoist.com/api/v1/) (`GET /api/v1/tasks`). Studio can mark an item bought (`POST /studio/shopping/complete` → `POST /api/v1/tasks/{id}/close`); e-ink Full is read-only.
 - Legacy `status` block (and v1 `{ id, width: "half"|"full" }`) is accepted on read and migrated to `battery` + `trash` at 1×1. Missing block ids (e.g. new `shopping`) are filled from defaults.
 - **localStorage** (`trmnl-studio-layout-v2`) — instant client-side persistence while editing (v1 key is migrated on load).
 - **Server sync** — browser localStorage alone is not readable by agents; sync so Senior Pomidor (or any agent) can `GET` the layout or `/studio/liquid`.
@@ -116,7 +116,7 @@ Copy `.env.example` → `.env` (gitignored). On the Debian host, create `/home/c
 | `WEATHER_LAT` | `30.4394` | Open-Meteo latitude (Pflugerville TX area) |
 | `WEATHER_LON` | `-97.6200` | Open-Meteo longitude |
 | `WEATHER_TZ` | `America/Chicago` | Timezone for weather + calendar window + waste |
-| `TODOIST_API_TOKEN` | _(empty)_ | Todoist REST API token for the shopping list. Never commit a real value. |
+| `TODOIST_API_TOKEN` | _(empty)_ | Todoist API token (API v1) for the shopping list. Never commit a real value. |
 | `TODOIST_PROJECT_ID` | `6hc3F4VwmP24XJCM` | Todoist project id for «Покупки» |
 | `PORT` | `8799` | Listen port |
 | `HOST` | `0.0.0.0` | Listen host |

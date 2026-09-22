@@ -32,6 +32,20 @@ describe("todoist shopping", () => {
     ]);
   });
 
+  it("maps API v1 { results } list payloads", () => {
+    const payload = mapTodoistTasksToShopping(
+      {
+        results: [
+          { id: "1", content: "Eggs", order: 1 },
+          { id: "2", content: "Butter", order: 2 },
+        ],
+        next_cursor: null,
+      },
+      "proj1",
+    );
+    expect(payload.items.map((i) => i.content)).toEqual(["Eggs", "Butter"]);
+  });
+
   it("returns unconfigured empty list without token", async () => {
     const payload = await fetchShopping({
       token: null,
@@ -45,7 +59,7 @@ describe("todoist shopping", () => {
     expect(payload.project_id).toBe(DEFAULT_TODOIST_PROJECT_ID);
   });
 
-  it("fetches Todoist REST tasks with Bearer token", async () => {
+  it("fetches Todoist API v1 tasks with Bearer token", async () => {
     const calls: { url: string; headers: HeadersInit | undefined }[] = [];
     const payload = await fetchShopping({
       token: "test-token",
@@ -57,17 +71,21 @@ describe("todoist shopping", () => {
           headers: init?.headers,
         });
         return new Response(
-          JSON.stringify([
-            { id: "1", content: "Eggs", order: 1 },
-            { id: "2", content: "Butter", order: 2 },
-          ]),
+          JSON.stringify({
+            results: [
+              { id: "1", content: "Eggs", order: 1 },
+              { id: "2", content: "Butter", order: 2 },
+            ],
+            next_cursor: null,
+          }),
           { status: 200, headers: { "Content-Type": "application/json" } },
         );
       },
     });
     expect(calls).toHaveLength(1);
     expect(calls[0]!.url).toContain("project_id=proj1");
-    expect(calls[0]!.url).toContain("api.todoist.com/rest/v2/tasks");
+    expect(calls[0]!.url).toContain("api.todoist.com/api/v1/tasks");
+    expect(calls[0]!.url).not.toContain("rest/v2");
     const auth = new Headers(calls[0]!.headers).get("Authorization");
     expect(auth).toBe("Bearer test-token");
     expect(payload.items.map((i) => i.content)).toEqual(["Eggs", "Butter"]);
@@ -77,9 +95,12 @@ describe("todoist shopping", () => {
     let hits = 0;
     const fetchImpl: typeof fetch = async () => {
       hits += 1;
-      return new Response(JSON.stringify([{ id: "1", content: "Milk", order: 1 }]), {
-        status: 200,
-      });
+      return new Response(
+        JSON.stringify({
+          results: [{ id: "1", content: "Milk", order: 1 }],
+        }),
+        { status: 200 },
+      );
     };
     const a = await fetchShopping({
       token: "t",
@@ -95,18 +116,22 @@ describe("todoist shopping", () => {
     expect(a.items).toEqual(b.items);
   });
 
-  it("closes a task and clears cache", async () => {
+  it("closes a task via API v1 and clears cache", async () => {
     let hits = 0;
     const fetchImpl: typeof fetch = async (input, init) => {
       hits += 1;
       const url = String(input);
       if (url.includes("/close")) {
+        expect(url).toBe("https://api.todoist.com/api/v1/tasks/abc123/close");
         expect(init?.method).toBe("POST");
         return new Response(null, { status: 204 });
       }
-      return new Response(JSON.stringify([{ id: "1", content: "Milk", order: 1 }]), {
-        status: 200,
-      });
+      return new Response(
+        JSON.stringify({
+          results: [{ id: "1", content: "Milk", order: 1 }],
+        }),
+        { status: 200 },
+      );
     };
     await fetchShopping({ token: "t", cacheMs: 60_000, fetchImpl });
     expect(hits).toBe(1);

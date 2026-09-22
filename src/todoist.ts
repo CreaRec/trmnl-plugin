@@ -3,7 +3,8 @@ import { createTtlCache, type TtlCache } from "./cache.js";
 /** Default Todoist project «Покупки» (shopping). */
 export const DEFAULT_TODOIST_PROJECT_ID = "6hc3F4VwmP24XJCM";
 
-const TODOIST_TASKS_URL = "https://api.todoist.com/rest/v2/tasks";
+/** Todoist unified API v1 (REST v2 was shut down; returns HTTP 410). */
+const TODOIST_TASKS_URL = "https://api.todoist.com/api/v1/tasks";
 
 export type ShoppingItem = {
   id: string;
@@ -62,12 +63,22 @@ function emptyShopping(
   };
 }
 
-/** Map Todoist REST tasks into a simple shopping list (active/incomplete only). */
+/** Normalize a bare task array or v1 `{ results }` list payload. */
+export function normalizeTodoistTaskList(tasks: unknown): unknown[] {
+  if (Array.isArray(tasks)) return tasks;
+  if (tasks != null && typeof tasks === "object") {
+    const results = (tasks as { results?: unknown }).results;
+    if (Array.isArray(results)) return results;
+  }
+  return [];
+}
+
+/** Map Todoist tasks into a simple shopping list (active/incomplete only). */
 export function mapTodoistTasksToShopping(
   tasks: unknown,
   projectId: string,
 ): ShoppingPayload {
-  const list = Array.isArray(tasks) ? tasks : [];
+  const list = normalizeTodoistTaskList(tasks);
   const items: ShoppingItem[] = [];
 
   for (const raw of list) {
@@ -96,7 +107,7 @@ export function mapTodoistTasksToShopping(
   };
 }
 
-/** Fetch active tasks from a Todoist project (REST v2). */
+/** Fetch active tasks from a Todoist project (API v1). */
 export async function fetchShopping(
   options: ShoppingFetchOptions,
 ): Promise<ShoppingPayload> {
