@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "Live fridge dashboard JSON for TRMNL Private Plugin (weather, waste, calendar)",
+  "description": "Live fridge dashboard JSON for TRMNL Private Plugin (weather, waste, calendar, shopping)",
   "engines": {
     "node": ">=22"
   },

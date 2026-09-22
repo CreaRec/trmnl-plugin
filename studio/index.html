@@ -48,11 +48,19 @@
       </div>
       <p class="studio-lede">
         Freeform <strong>12×8</strong> cell grid on the 800×480 screen — drag to
-        move, SE corner to resize (snap to cells; no overlap). Sync layout to the
-        server, then <strong>Export Liquid</strong> and paste into TRMNL Markup →
-        Full. Preview may differ from the device; exported Liquid is the device
-        source of truth.
+        move, SE corner to resize (snap to cells; no overlap). Toggle widgets
+        on/off below. Sync layout to the server, then
+        <strong>Export Liquid</strong> and paste into TRMNL Markup → Full.
+        Preview may differ from the device; exported Liquid is the device source
+        of truth. Shopping list can be marked bought here (Todoist); e-ink Full
+        is read-only.
       </p>
+      <div
+        id="widget-toggles"
+        class="studio-toggles"
+        role="group"
+        aria-label="Enable or disable widgets"
+      ></div>
       <div class="studio-actions" role="toolbar" aria-label="Layout actions">
         <button type="button" id="btn-save-local">Save locally</button>
         <button type="button" id="btn-sync-server" class="primary">

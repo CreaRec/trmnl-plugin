@@ -87,7 +87,7 @@ Confirm the exact path under Markup Editor → **Your Variables** / `trmnl` (nam
 ## Wiring
 
 1. Node service serves JSON matching the sample; caches ICS (~10 min) and Open-Meteo (~20 min).
-2. Host `.env` supplies `CALENDAR_ICS_URL` + optional weather overrides (see `.env.example`).
+2. Host `.env` supplies `CALENDAR_ICS_URL`, optional `TODOIST_API_TOKEN` / `TODOIST_PROJECT_ID` for shopping, and optional weather overrides (see `.env.example`).
 3. Deploy compose uses `env_file: .env` under `/home/crearec/trmnl-plugin/`.
 4. Nginx snippet: [`deploy/nginx-trmnl.conf`](../deploy/nginx-trmnl.conf).
 

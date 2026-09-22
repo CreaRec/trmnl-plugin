@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-/** Layout schema version: cell rects `{ id, x, y, w, h }` on a fine grid. */
+/** Layout schema version: cell rects `{ id, x, y, w, h, enabled? }` on a fine grid. */
 export const STUDIO_LAYOUT_VERSION = 2;
 
 /** Screen size the Studio preview and device Full view target (TRMNL OG). */
@@ -25,6 +25,7 @@ export const BLOCK_IDS = [
   "battery",
   "trash",
   "calendar",
+  "shopping",
 ] as const;
 
 export type BlockId = (typeof BLOCK_IDS)[number];
@@ -44,6 +45,18 @@ export function fixedSizeFor(id: BlockId): { w: number; h: number } | null {
   return null;
 }
 
+/**
+ * Default visibility. Shopping is off so existing fridge layouts stay unchanged
+ * until the user enables it in Studio.
+ */
+export function defaultEnabledFor(id: BlockId): boolean {
+  return id !== "shopping";
+}
+
+export function isBlockEnabled(block: Pick<LayoutBlock, "enabled">): boolean {
+  return block.enabled !== false;
+}
+
 /** v2 cell rectangle (0-based column/row, inclusive span). */
 export type LayoutBlock = {
   id: BlockId;
@@ -51,6 +64,8 @@ export type LayoutBlock = {
   y: number;
   w: number;
   h: number;
+  /** When false, block is omitted from Full Liquid / fridge render. Default true except shopping. */
+  enabled: boolean;
 };
 
 export type StudioLayout = {
@@ -62,14 +77,15 @@ export type StudioLayout = {
 
 const BLOCK_ID_SET = new Set<string>(BLOCK_IDS);
 
-/** Default v2 placement: weather 4×3 pair, trash+battery top-right 1×1, calendar rest. */
+/** Default v2 placement: weather 4×3 pair, trash+battery top-right 1×1, calendar rest; shopping off in the free gap. */
 export function defaultBlockRects(): LayoutBlock[] {
   return [
-    { id: "weather_today", x: 0, y: 0, w: 4, h: 3 },
-    { id: "weather_tomorrow", x: 4, y: 0, w: 4, h: 3 },
-    { id: "battery", x: 11, y: 0, w: 1, h: 1 },
-    { id: "trash", x: 10, y: 0, w: 1, h: 1 },
-    { id: "calendar", x: 0, y: 4, w: 12, h: 4 },
+    { id: "weather_today", x: 0, y: 0, w: 4, h: 3, enabled: true },
+    { id: "weather_tomorrow", x: 4, y: 0, w: 4, h: 3, enabled: true },
+    { id: "battery", x: 11, y: 0, w: 1, h: 1, enabled: true },
+    { id: "trash", x: 10, y: 0, w: 1, h: 1, enabled: true },
+    { id: "calendar", x: 0, y: 4, w: 12, h: 4, enabled: true },
+    { id: "shopping", x: 8, y: 0, w: 2, h: 3, enabled: false },
   ];
 }
 
@@ -152,22 +168,24 @@ export function expandLegacyStatusBlocks(
       let tx = bx + 1;
       if (tx >= GRID_COLS) tx = Math.max(0, bx - 1);
       if (!hasBattery) {
-        out.push({ id: "battery", x: bx, y: by, w: 1, h: 1 });
+        out.push({ id: "battery", x: bx, y: by, w: 1, h: 1, enabled: true });
       }
       if (!hasTrash) {
-        out.push({ id: "trash", x: tx, y: by, w: 1, h: 1 });
+        out.push({ id: "trash", x: tx, y: by, w: 1, h: 1, enabled: true });
       }
     } else {
       // v1 width-only — defaults fill geometry later
       if (!hasBattery) {
         out.push({
           id: "battery",
+          enabled: true,
           ...(block.width != null ? { width: block.width } : {}),
         });
       }
       if (!hasTrash) {
         out.push({
           id: "trash",
+          enabled: true,
           ...(block.width != null ? { width: block.width } : {}),
         });
       }
@@ -181,7 +199,7 @@ export function expandLegacyStatusBlocks(
  * Weather halves stay top row; battery+trash 1×1; calendar fills the rest.
  */
 export function migrateV1BlocksToV2(
-  v1Blocks: Array<{ id: string; width?: string }>,
+  v1Blocks: Array<{ id: string; width?: string; enabled?: boolean }>,
 ): LayoutBlock[] {
   const defaults = defaultBlockRects();
   const byId = new Map<BlockId, LayoutBlock>(
@@ -192,7 +210,11 @@ export function migrateV1BlocksToV2(
   for (const b of v1Blocks) {
     if (BLOCK_ID_SET.has(b.id) && !seen.has(b.id as BlockId)) {
       const id = b.id as BlockId;
-      ordered.push(byId.get(id)!);
+      const base = byId.get(id)!;
+      ordered.push({
+        ...base,
+        enabled: b.enabled ?? defaultEnabledFor(id),
+      });
       seen.add(id);
     }
   }
@@ -202,15 +224,24 @@ export function migrateV1BlocksToV2(
   return ordered;
 }
 
+function parseEnabled(
+  block: Record<string, unknown>,
+  id: BlockId,
+): boolean {
+  if (typeof block.enabled === "boolean") return block.enabled;
+  return defaultEnabledFor(id);
+}
+
 function parseCellBlock(
   block: Record<string, unknown>,
   id: BlockId,
 ): LayoutBlock {
+  const enabled = parseEnabled(block, id);
   const hasCells =
     isInt(block.x) || isInt(block.y) || isInt(block.w) || isInt(block.h);
   if (!hasCells) {
     const def = defaultBlockRects().find((b) => b.id === id)!;
-    return { ...def };
+    return { ...def, enabled };
   }
   if (!isInt(block.x) || !isInt(block.y) || !isInt(block.w) || !isInt(block.h)) {
     throw new Error(`block ${id} requires integer x,y,w,h`);
@@ -229,15 +260,17 @@ function parseCellBlock(
     mins.w,
     mins.h,
   );
-  return { id, ...clamped };
+  return { id, ...clamped, enabled };
 }
 
-function assertNoOverlap(blocks: LayoutBlock[]): void {
-  for (let i = 0; i < blocks.length; i++) {
-    for (let j = i + 1; j < blocks.length; j++) {
-      if (rectsOverlap(blocks[i]!, blocks[j]!)) {
+/** Overlap only among enabled blocks — disabled widgets keep a saved rect but do not reserve screen space. */
+export function assertNoOverlap(blocks: LayoutBlock[]): void {
+  const active = blocks.filter(isBlockEnabled);
+  for (let i = 0; i < active.length; i++) {
+    for (let j = i + 1; j < active.length; j++) {
+      if (rectsOverlap(active[i]!, active[j]!)) {
         throw new Error(
-          `blocks overlap: ${blocks[i]!.id} and ${blocks[j]!.id}`,
+          `blocks overlap: ${active[i]!.id} and ${active[j]!.id}`,
         );
       }
     }
@@ -248,7 +281,8 @@ function assertNoOverlap(blocks: LayoutBlock[]): void {
  * Validate and normalize layout to v2.
  * Accepts v1 half/full payloads and upgrades them to cell rects.
  * Migrates legacy `status` → `battery` + `trash`.
- * Writes always use version 2 + grid metadata.
+ * Missing known block ids (e.g. new `shopping`) are filled from defaults.
+ * Writes always use version 2 + grid metadata + explicit `enabled`.
  */
 export function validateStudioLayout(raw: unknown): StudioLayout {
   if (raw == null || typeof raw !== "object") {
@@ -285,7 +319,7 @@ export function validateStudioLayout(raw: unknown): StudioLayout {
   let blocks: LayoutBlock[];
 
   if (incomingVersion <= 1 || looksLikeV1) {
-    const v1: Array<{ id: string; width?: string }> = [];
+    const v1: Array<{ id: string; width?: string; enabled?: boolean }> = [];
     const seen = new Set<string>();
     for (const block of expanded) {
       const id = block.id;
@@ -302,13 +336,11 @@ export function validateStudioLayout(raw: unknown): StudioLayout {
       } else if (block.width != null) {
         throw new Error(`invalid width for ${id}`);
       }
-      v1.push({ id, width });
+      const enabled =
+        typeof block.enabled === "boolean" ? block.enabled : undefined;
+      v1.push({ id, width, enabled });
     }
-    for (const id of BLOCK_IDS) {
-      if (!seen.has(id)) {
-        throw new Error(`missing block id: ${id}`);
-      }
-    }
+    // Fill any newly added block ids (e.g. shopping) from defaults
     blocks = migrateV1BlocksToV2(v1);
   } else {
     const seen = new Set<string>();
@@ -324,9 +356,11 @@ export function validateStudioLayout(raw: unknown): StudioLayout {
       seen.add(id);
       blocks.push(parseCellBlock(block, id as BlockId));
     }
+    // Auto-fill missing ids so older saved layouts gain shopping (disabled)
+    const defaults = defaultBlockRects();
     for (const id of BLOCK_IDS) {
       if (!seen.has(id)) {
-        throw new Error(`missing block id: ${id}`);
+        blocks.push({ ...defaults.find((b) => b.id === id)! });
       }
     }
     assertNoOverlap(blocks);

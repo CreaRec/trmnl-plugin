@@ -3,6 +3,7 @@ import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { loadConfig } from "./config.js";
 import { buildHealthPayload, buildPollPayload } from "./payload.js";
 import {
   isAuthorizedPollRequest,
@@ -16,6 +17,7 @@ import {
   writeStudioLayout,
 } from "./studio-layout.js";
 import { renderStudioLiquid } from "./studio-liquid.js";
+import { completeShoppingItem } from "./todoist.js";
 
 const JSON_HEADERS = {
   "Content-Type": "application/json; charset=utf-8",
@@ -204,6 +206,66 @@ async function handleStudioLayout(
   sendJson(res, 405, { error: "method_not_allowed" });
 }
 
+async function handleShoppingComplete(
+  req: IncomingMessage,
+  res: ServerResponse,
+  method: string,
+): Promise<void> {
+  if (method !== "POST") {
+    sendJson(res, 405, { error: "method_not_allowed" });
+    return;
+  }
+
+  let rawText: string;
+  try {
+    rawText = await readRequestBody(req, 8_000);
+  } catch (err) {
+    if (err instanceof Error && err.message === "body_too_large") {
+      sendJson(res, 413, { error: "body_too_large" });
+      return;
+    }
+    throw err;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = rawText ? JSON.parse(rawText) : null;
+  } catch {
+    sendJson(res, 400, { error: "invalid_json" });
+    return;
+  }
+
+  const id =
+    parsed != null &&
+    typeof parsed === "object" &&
+    "id" in parsed &&
+    (typeof (parsed as { id: unknown }).id === "string" ||
+      typeof (parsed as { id: unknown }).id === "number")
+      ? String((parsed as { id: string | number }).id)
+      : "";
+
+  const config = loadConfig();
+  const result = await completeShoppingItem({
+    token: config.todoistApiToken,
+    taskId: id,
+  });
+
+  if (!result.ok) {
+    const status =
+      result.error === "todoist_not_configured"
+        ? 503
+        : result.error === "invalid_task_id"
+          ? 400
+          : result.status && result.status >= 400 && result.status < 600
+            ? result.status
+            : 502;
+    sendJson(res, status, { error: result.error });
+    return;
+  }
+
+  sendJson(res, 200, { ok: true });
+}
+
 export async function handleRequest(
   req: IncomingMessage,
   res: ServerResponse,
@@ -225,6 +287,12 @@ export async function handleRequest(
   // Studio layout API
   if (path === "/studio/layout") {
     await handleStudioLayout(req, res, method);
+    return;
+  }
+
+  // Studio-only: mark a Todoist shopping task complete (bought)
+  if (path === "/studio/shopping/complete") {
+    await handleShoppingComplete(req, res, method);
     return;
   }
 

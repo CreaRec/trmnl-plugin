@@ -1,3 +1,5 @@
+import { DEFAULT_TODOIST_PROJECT_ID } from "./todoist.js";
+
 export type AppConfig = {
   calendarIcsUrl: string | null;
   weatherLat: number;
@@ -5,6 +7,9 @@ export type AppConfig = {
   weatherTz: string;
   calendarCacheMs: number;
   weatherCacheMs: number;
+  todoistApiToken: string | null;
+  todoistProjectId: string;
+  shoppingCacheMs: number;
 };
 
 const DEFAULT_LAT = 30.4394;
@@ -40,6 +45,9 @@ function parseNumber(raw: string | undefined, fallback: number): number {
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
+  const todoistToken = env.TODOIST_API_TOKEN?.trim() || null;
+  const todoistProjectId =
+    env.TODOIST_PROJECT_ID?.trim() || DEFAULT_TODOIST_PROJECT_ID;
   return {
     calendarIcsUrl: normalizeIcsUrl(env.CALENDAR_ICS_URL),
     weatherLat: parseNumber(env.WEATHER_LAT, DEFAULT_LAT),
@@ -48,5 +56,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     // ~10 min ICS / ~20 min weather — within the product cache windows
     calendarCacheMs: 10 * 60 * 1000,
     weatherCacheMs: 20 * 60 * 1000,
+    todoistApiToken: todoistToken,
+    todoistProjectId,
+    // Shopping list ~2 min — lists change more often than weather/ICS
+    shoppingCacheMs: 2 * 60 * 1000,
   };
 }
