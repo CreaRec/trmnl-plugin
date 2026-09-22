@@ -150,9 +150,13 @@ describe("studio routes", () => {
     expect(js).toContain("creafridge-calendar");
     expect(js).toContain("creafridge-calendar__list");
     expect(js).toContain("creafridge-shopping");
+    expect(js).toContain("creafridge-shopping__item");
     expect(js).toContain("isBlockEnabled");
     expect(js).toContain("setBlockEnabled");
-    expect(js).toContain("shopping/complete");
+    expect(js).not.toContain("creafridge-shopping__buy");
+    expect(js).not.toContain("shopping/complete");
+    expect(js).not.toContain("Mark bought");
+    expect(js).not.toContain("data-shopping-id");
     expect(js).toContain("text--red");
     expect(js).not.toContain("grid--cols-4");
     expect(js).not.toContain("col--span-3");

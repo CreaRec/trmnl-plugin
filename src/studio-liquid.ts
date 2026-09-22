@@ -192,7 +192,7 @@ function calendarSnippet(): string {
 </div>`;
 }
 
-/** Read-only shopping list for e-ink Full (complete via Studio / Todoist app). */
+/** Read-only plain shopping list for e-ink Full (complete via Todoist app). */
 function shoppingSnippet(): string {
   return `<div class="outline rounded--medium creafridge-shopping" style="height:100%;box-sizing:border-box;overflow:hidden;">
   <span class="label creafridge-shopping__title">{{ shopping.label | default: "Shopping" }}</span>

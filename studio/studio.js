@@ -119,10 +119,6 @@ function liquidUrl() {
   return `${studioRootPath()}/liquid`;
 }
 
-function shoppingCompleteUrl() {
-  return `${studioRootPath()}/shopping/complete`;
-}
-
 function setStatus(message, tone = "") {
   const el = document.getElementById("studio-status");
   if (!el) return;
@@ -521,13 +517,11 @@ function shoppingCardHtml(poll) {
   const items = Array.isArray(shopping?.items) ? shopping.items : [];
   let body;
   if (items.length > 0) {
+    // Plain read-only list (matches Liquid / e-ink) — no checkbox chrome
     body = items
       .map(
-        (item) => `
-        <div class="creafridge-shopping__row">
-          <span class="title title--small creafridge-shopping__item">• ${esc(item.content || "")}</span>
-          <button type="button" class="creafridge-shopping__buy" data-shopping-id="${esc(item.id)}" title="Mark bought">✓</button>
-        </div>`,
+        (item) =>
+          `<span class="title title--small creafridge-shopping__item">• ${esc(item.content || "")}</span>`,
       )
       .join("");
   } else if (shopping && shopping.configured === false) {
@@ -664,10 +658,6 @@ function render() {
       wrap
         .querySelector("[data-resize]")
         ?.addEventListener("pointerdown", onResizePointerDown);
-      wrap.querySelectorAll("[data-shopping-id]").forEach((btn) => {
-        btn.addEventListener("pointerdown", (ev) => ev.stopPropagation());
-        btn.addEventListener("click", onShoppingBuyClick);
-      });
       body.appendChild(wrap);
     }
   }
@@ -881,35 +871,6 @@ async function fetchPoll() {
   state.poll = await res.json();
   render();
   setStatus(`Poll loaded · ${state.poll.updated_at || "ok"}`, "ok");
-}
-
-async function onShoppingBuyClick(ev) {
-  ev.preventDefault();
-  ev.stopPropagation();
-  const btn = ev.currentTarget;
-  if (!(btn instanceof HTMLElement)) return;
-  const id = btn.dataset.shoppingId;
-  if (!id) return;
-  btn.disabled = true;
-  try {
-    const res = await fetch(shoppingCompleteUrl(), {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({ id }),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || `complete HTTP ${res.status}`);
-    }
-    setStatus("Marked bought in Todoist", "ok");
-    await fetchPoll();
-  } catch (e) {
-    btn.disabled = false;
-    setStatus(e instanceof Error ? e.message : "complete failed", "err");
-  }
 }
 
 async function syncToServer({ quiet = false } = {}) {
