@@ -261,5 +261,11 @@ describe("studio-layout v2", () => {
     const liquid = renderStudioLiquid(layout);
     expect(liquid).toMatch(/shopping\.items/);
     expect(liquid).toMatch(/shopping\.label/);
+    expect(liquid).toContain("creafridge-shopping__item");
+    expect(liquid).toContain("• {{ item.content }}");
+    expect(liquid).not.toContain("creafridge-shopping__buy");
+    expect(liquid).not.toContain("✓");
+    expect(liquid).not.toContain("checkbox");
+    expect(liquid).not.toContain("data-shopping-id");
   });
 });
