@@ -285,6 +285,84 @@ export function assertNoOverlap(blocks: LayoutBlock[]): void {
 }
 
 /**
+ * True when `candidate` overlaps any currently enabled sibling (skipping `skipId`).
+ * Disabled siblings do not reserve space.
+ */
+export function wouldOverlap(
+  blocks: Array<Pick<LayoutBlock, "id" | "x" | "y" | "w" | "h" | "enabled">>,
+  candidate: Pick<LayoutBlock, "x" | "y" | "w" | "h" | "enabled">,
+  skipId?: string,
+): boolean {
+  if (!isBlockEnabled(candidate)) return false;
+  return blocks.some(
+    (b) =>
+      b.id !== skipId &&
+      isBlockEnabled(b) &&
+      rectsOverlap(candidate, b),
+  );
+}
+
+/**
+ * Scan the grid left-to-right, top-to-bottom for the first cell origin where a
+ * `w`×`h` rect fits without overlapping enabled blocks (excluding `skipId`).
+ * Returns null when the grid has no free placement of that size.
+ */
+export function findFreePlacement(
+  blocks: Array<Pick<LayoutBlock, "id" | "x" | "y" | "w" | "h" | "enabled">>,
+  size: { w: number; h: number },
+  skipId?: string,
+  cols: number = GRID_COLS,
+  rows: number = GRID_ROWS,
+): { x: number; y: number } | null {
+  const w = Math.trunc(size.w);
+  const h = Math.trunc(size.h);
+  if (w < 1 || h < 1 || w > cols || h > rows) return null;
+  for (let y = 0; y <= rows - h; y++) {
+    for (let x = 0; x <= cols - w; x++) {
+      const candidate = { x, y, w, h, enabled: true };
+      if (!wouldOverlap(blocks, candidate, skipId)) {
+        return { x, y };
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Resolve geometry for enabling a block: keep current rect when free, otherwise
+ * relocate to the first free slot that fits fixed/current size. Returns null
+ * when no free placement exists among currently enabled siblings.
+ */
+export function resolveEnablePlacement(
+  blocks: Array<Pick<LayoutBlock, "id" | "x" | "y" | "w" | "h" | "enabled">>,
+  block: Pick<LayoutBlock, "id" | "x" | "y" | "w" | "h">,
+): Pick<LayoutBlock, "x" | "y" | "w" | "h"> | null {
+  const id = block.id as BlockId;
+  const fixed = fixedSizeFor(id);
+  const mins = minSizeFor(id);
+  const size = fixed
+    ? fixed
+    : {
+        w: Math.max(mins.w, Math.trunc(block.w)),
+        h: Math.max(mins.h, Math.trunc(block.h)),
+      };
+  const clamped = clampBlockRect(
+    { x: block.x, y: block.y, w: size.w, h: size.h },
+    GRID_COLS,
+    GRID_ROWS,
+    mins.w,
+    mins.h,
+  );
+  const inPlace = { ...clamped, enabled: true as const };
+  if (!wouldOverlap(blocks, inPlace, block.id)) {
+    return clamped;
+  }
+  const free = findFreePlacement(blocks, { w: clamped.w, h: clamped.h }, block.id);
+  if (!free) return null;
+  return { x: free.x, y: free.y, w: clamped.w, h: clamped.h };
+}
+
+/**
  * Validate and normalize layout to v2.
  * Accepts v1 half/full payloads and upgrades them to cell rects.
  * Migrates legacy `status` → `battery` + `trash`.

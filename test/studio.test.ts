@@ -157,6 +157,8 @@ describe("studio routes", () => {
     expect(js).toContain("creafridge-shopping__item");
     expect(js).toContain("isBlockEnabled");
     expect(js).toContain("setBlockEnabled");
+    expect(js).toContain("findFreePlacement");
+    expect(js).toContain("resolveEnablePlacement");
     expect(js).not.toContain("creafridge-shopping__buy");
     expect(js).not.toContain("shopping/complete");
     expect(js).not.toContain("Mark bought");

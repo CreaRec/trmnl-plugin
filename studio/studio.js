@@ -94,13 +94,55 @@ function rectsOverlap(a, b) {
 }
 
 function wouldOverlap(blocks, candidate, skipId) {
+  if (!isBlockEnabled(candidate)) return false;
   return blocks.some(
     (b) =>
       b.id !== skipId &&
       isBlockEnabled(b) &&
-      isBlockEnabled(candidate) &&
       rectsOverlap(candidate, b),
   );
+}
+
+/** Scan L→R, T→B for first origin where w×h fits among enabled siblings. */
+function findFreePlacement(blocks, size, skipId) {
+  const w = Math.trunc(size.w);
+  const h = Math.trunc(size.h);
+  if (w < 1 || h < 1 || w > GRID_COLS || h > GRID_ROWS) return null;
+  for (let y = 0; y <= GRID_ROWS - h; y++) {
+    for (let x = 0; x <= GRID_COLS - w; x++) {
+      const candidate = { x, y, w, h, enabled: true };
+      if (!wouldOverlap(blocks, candidate, skipId)) {
+        return { x, y };
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Keep current rect when free; else relocate to first free slot that fits
+ * fixedSizeFor / current size. Null when the grid has no free placement.
+ */
+function resolveEnablePlacement(blocks, block) {
+  const fixed = fixedSizeFor(block.id);
+  const mins = minSizeFor(block.id);
+  const size = fixed
+    ? fixed
+    : {
+        w: Math.max(mins.w, Math.trunc(block.w)),
+        h: Math.max(mins.h, Math.trunc(block.h)),
+      };
+  const clamped = clampRect(
+    { x: block.x, y: block.y, w: size.w, h: size.h },
+    block.id,
+  );
+  const inPlace = { ...clamped, enabled: true };
+  if (!wouldOverlap(blocks, inPlace, block.id)) {
+    return clamped;
+  }
+  const free = findFreePlacement(blocks, { w: clamped.w, h: clamped.h }, block.id);
+  if (!free) return null;
+  return { x: free.x, y: free.y, w: clamped.w, h: clamped.h };
 }
 
 function studioRootPath() {
@@ -620,14 +662,18 @@ function setBlockEnabled(id, enabled) {
   const blocks = state.layout.blocks.map((b) => ({ ...b }));
   const idx = blocks.findIndex((b) => b.id === id);
   if (idx < 0) return;
-  const next = { ...blocks[idx], enabled: Boolean(enabled) };
-  if (next.enabled && wouldOverlap(blocks, next, id)) {
-    setStatus(
-      `Cannot enable ${LABELS[id] || id}: overlaps another widget — move or resize first`,
-      "err",
-    );
-    renderWidgetToggles();
-    return;
+  let next = { ...blocks[idx], enabled: Boolean(enabled) };
+  if (next.enabled) {
+    const placed = resolveEnablePlacement(blocks, blocks[idx]);
+    if (!placed) {
+      setStatus(
+        `Cannot enable ${LABELS[id] || id}: overlaps another widget — move or resize first`,
+        "err",
+      );
+      renderWidgetToggles();
+      return;
+    }
+    next = { ...next, ...placed, enabled: true };
   }
   blocks[idx] = next;
   state.layout = saveLocal({ ...state.layout, blocks });
