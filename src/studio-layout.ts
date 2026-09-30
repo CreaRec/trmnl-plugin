@@ -24,6 +24,7 @@ export const BLOCK_IDS = [
   "weather_tomorrow",
   "battery",
   "trash",
+  "watering",
   "calendar",
   "shopping",
 ] as const;
@@ -33,24 +34,28 @@ export type BlockId = (typeof BLOCK_IDS)[number];
 /** Legacy single status strip — migrated to battery + trash. */
 const LEGACY_STATUS_ID = "status";
 
-/** Per-block mins — battery/trash are fixed 1×1 icon cells. */
+/** Per-block mins — battery/trash/watering are fixed 1×1 icon cells. */
 export function minSizeFor(id: BlockId): { w: number; h: number } {
-  if (id === "battery" || id === "trash") return { w: 1, h: 1 };
+  if (id === "battery" || id === "trash" || id === "watering") {
+    return { w: 1, h: 1 };
+  }
   return { w: MIN_BLOCK_W, h: MIN_BLOCK_H };
 }
 
 /** Fixed size lock (no free resize). */
 export function fixedSizeFor(id: BlockId): { w: number; h: number } | null {
-  if (id === "battery" || id === "trash") return { w: 1, h: 1 };
+  if (id === "battery" || id === "trash" || id === "watering") {
+    return { w: 1, h: 1 };
+  }
   return null;
 }
 
 /**
- * Default visibility. Shopping is off so existing fridge layouts stay unchanged
- * until the user enables it in Studio.
+ * Default visibility. Shopping and watering are off so existing fridge layouts
+ * stay unchanged until the user enables them in Studio.
  */
 export function defaultEnabledFor(id: BlockId): boolean {
-  return id !== "shopping";
+  return id !== "shopping" && id !== "watering";
 }
 
 export function isBlockEnabled(block: Pick<LayoutBlock, "enabled">): boolean {
@@ -64,7 +69,7 @@ export type LayoutBlock = {
   y: number;
   w: number;
   h: number;
-  /** When false, block is omitted from Full Liquid / fridge render. Default true except shopping. */
+  /** When false, block is omitted from Full Liquid / fridge render. Default true except shopping/watering. */
   enabled: boolean;
 };
 
@@ -77,7 +82,7 @@ export type StudioLayout = {
 
 const BLOCK_ID_SET = new Set<string>(BLOCK_IDS);
 
-/** Default v2 placement: weather 4×3 pair, trash+battery top-right 1×1, calendar rest; shopping off in the free gap. */
+/** Default v2 placement: weather 4×3 pair, trash+battery top-right 1×1, calendar rest; shopping/watering off. */
 export function defaultBlockRects(): LayoutBlock[] {
   return [
     { id: "weather_today", x: 0, y: 0, w: 4, h: 3, enabled: true },
@@ -86,6 +91,8 @@ export function defaultBlockRects(): LayoutBlock[] {
     { id: "trash", x: 10, y: 0, w: 1, h: 1, enabled: true },
     { id: "calendar", x: 0, y: 4, w: 12, h: 4, enabled: true },
     { id: "shopping", x: 8, y: 0, w: 2, h: 3, enabled: false },
+    // Below battery — free cell; disabled until user enables in Studio
+    { id: "watering", x: 11, y: 1, w: 1, h: 1, enabled: false },
   ];
 }
 
@@ -281,7 +288,7 @@ export function assertNoOverlap(blocks: LayoutBlock[]): void {
  * Validate and normalize layout to v2.
  * Accepts v1 half/full payloads and upgrades them to cell rects.
  * Migrates legacy `status` → `battery` + `trash`.
- * Missing known block ids (e.g. new `shopping`) are filled from defaults.
+ * Missing known block ids (e.g. new `shopping` / `watering`) are filled from defaults.
  * Writes always use version 2 + grid metadata + explicit `enabled`.
  */
 export function validateStudioLayout(raw: unknown): StudioLayout {
@@ -340,7 +347,7 @@ export function validateStudioLayout(raw: unknown): StudioLayout {
         typeof block.enabled === "boolean" ? block.enabled : undefined;
       v1.push({ id, width, enabled });
     }
-    // Fill any newly added block ids (e.g. shopping) from defaults
+    // Fill any newly added block ids (e.g. shopping, watering) from defaults
     blocks = migrateV1BlocksToV2(v1);
   } else {
     const seen = new Set<string>();
@@ -356,7 +363,7 @@ export function validateStudioLayout(raw: unknown): StudioLayout {
       seen.add(id);
       blocks.push(parseCellBlock(block, id as BlockId));
     }
-    // Auto-fill missing ids so older saved layouts gain shopping (disabled)
+    // Auto-fill missing ids so older saved layouts gain shopping/watering (disabled)
     const defaults = defaultBlockRects();
     for (const id of BLOCK_IDS) {
       if (!seen.has(id)) {

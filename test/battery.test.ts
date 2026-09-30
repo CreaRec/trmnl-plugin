@@ -65,10 +65,11 @@ describe("weatherSizeMetrics", () => {
   });
 });
 
-describe("battery/trash min size", () => {
+describe("battery/trash/watering min size", () => {
   it("locks icon blocks to a single cell", () => {
     expect(minSizeFor("battery")).toEqual({ w: 1, h: 1 });
     expect(minSizeFor("trash")).toEqual({ w: 1, h: 1 });
+    expect(minSizeFor("watering")).toEqual({ w: 1, h: 1 });
   });
 });
 

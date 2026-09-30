@@ -160,6 +160,17 @@ function trashSnippet(): string {
 </div>`;
 }
 
+/** Green watering-can icon when watering.active (Tue/Fri); else empty 1×1 cell. */
+function wateringSnippet(): string {
+  return `<div class="outline rounded--medium creafridge-watering-cell" style="height:100%;box-sizing:border-box;overflow:hidden;">
+  {% if watering.active %}
+    <svg class="creafridge-watering text--green" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" aria-label="{{ watering.label | default: 'Watering' }}" role="img">
+      <path fill="currentColor" d="M9.1 3h4.8a1 1 0 0 1 .9.6L16 6.5h1c.83 0 1.5.67 1.5 1.5 0 .28-.08.54-.22.76l2.05 1.37a1 1 0 1 1-1.1 1.67L17.28 9.5H16.5V18a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2V9.5H4.5a1.5 1.5 0 0 1 0-3H8l1.2-2.4A1 1 0 0 1 9.1 3zm-.5 3L7.9 7.5h7.2L14.4 6H8.6zM7.5 9.5V18h7V9.5h-7z"/>
+    </svg>
+  {% endif %}
+</div>`;
+}
+
 function calendarSnippet(): string {
   return `<div class="outline rounded--medium creafridge-calendar" style="height:100%;box-sizing:border-box;overflow:hidden;">
   {% if days and days.size > 0 %}
@@ -228,6 +239,8 @@ function blockSnippet(block: LayoutBlock): string {
       return batterySnippet();
     case "trash":
       return trashSnippet();
+    case "watering":
+      return wateringSnippet();
     case "calendar":
       return calendarSnippet();
     case "shopping":
@@ -244,7 +257,7 @@ function gridPlacement(block: LayoutBlock): string {
   return `grid-column: ${colStart} / span ${block.w}; grid-row: ${rowStart} / span ${block.h};`;
 }
 
-/** Shared device + Studio styles for weather variants, battery, trash, calendar. */
+/** Shared device + Studio styles for weather variants, battery, trash, watering, calendar. */
 export const CREAFRIDGE_BLOCK_CSS = `
   .creafridge-weather {
     display: flex;
@@ -345,7 +358,8 @@ export const CREAFRIDGE_BLOCK_CSS = `
     justify-items: center;
   }
   .creafridge-battery-cell,
-  .creafridge-trash-cell {
+  .creafridge-trash-cell,
+  .creafridge-watering-cell {
     display: grid;
     place-items: center;
     padding: 2px;
@@ -368,6 +382,14 @@ export const CREAFRIDGE_BLOCK_CSS = `
   .creafridge-trash {
     display: block;
     color: #c0392b;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+  }
+  .creafridge-watering {
+    display: block;
+    color: #27ae60;
     width: 100%;
     height: 100%;
     max-width: 100%;

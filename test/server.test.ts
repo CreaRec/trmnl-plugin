@@ -102,6 +102,7 @@ describe("trmnl-plugin HTTP", () => {
     expect(body.plugin_label).toBe("CreaFridge");
     expect(body.weather).toBeTypeOf("object");
     expect(body.waste).toBeTypeOf("object");
+    expect(body.watering).toBeTypeOf("object");
     expect(Array.isArray(body.events)).toBe(true);
     expect(Array.isArray(body.days)).toBe(true);
     expect((body.days as unknown[]).length).toBe(7);

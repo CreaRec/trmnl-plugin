@@ -90,6 +90,7 @@ describe("studio routes", () => {
       expect(body.plugin_label).toBe("CreaFridge");
       expect(body.weather).toBeTypeOf("object");
       expect(body.waste).toBeTypeOf("object");
+      expect(body.watering).toBeTypeOf("object");
       expect(Array.isArray(body.events)).toBe(true);
       expect(Array.isArray(body.days)).toBe(true);
       expect(body.shopping).toBeTypeOf("object");
@@ -147,6 +148,9 @@ describe("studio routes", () => {
     expect(js).toContain("creafridge-trash-cell");
     expect(js).toContain("trash_recycle");
     expect(js).toContain('viewBox="0 0 24 24"');
+    expect(js).toContain("creafridge-watering-cell");
+    expect(js).toContain("creafridge-watering");
+    expect(js).toContain("text--green");
     expect(js).toContain("creafridge-calendar");
     expect(js).toContain("creafridge-calendar__list");
     expect(js).toContain("creafridge-shopping");
@@ -164,7 +168,9 @@ describe("studio routes", () => {
     expect(js).toContain("fixedSizeFor");
     expect(js).toContain('"battery"');
     expect(js).toContain('"trash"');
+    expect(js).toContain('"watering"');
     expect(js).toContain('"shopping"');
+    expect(js).toContain("Watering");
     expect(js).toContain("expandLegacyStatusBlocks");
     expect(js).not.toMatch(/BLOCK_IDS = \[[^\]]*"status"/s);
     expect(js).not.toContain("Status · Battery + Waste");
@@ -231,6 +237,7 @@ describe("studio routes", () => {
       "trash",
       "weather_today",
       "weather_tomorrow",
+      "watering",
       "shopping",
     ]);
     expect(saved.blocks.find((b) => b.id === "weather_today")).toMatchObject({
@@ -243,6 +250,11 @@ describe("studio routes", () => {
     });
     expect(saved.blocks.find((b) => b.id === "shopping")).toMatchObject({
       enabled: false,
+    });
+    expect(saved.blocks.find((b) => b.id === "watering")).toMatchObject({
+      enabled: false,
+      w: 1,
+      h: 1,
     });
     expect(saved.updated_at).toBeTypeOf("string");
 
@@ -293,6 +305,12 @@ describe("studio routes", () => {
     expect(saved.blocks.map((b) => b.id)).toContain("shopping");
     expect(saved.blocks.find((b) => b.id === "shopping")).toMatchObject({
       enabled: false,
+    });
+    expect(saved.blocks.map((b) => b.id)).toContain("watering");
+    expect(saved.blocks.find((b) => b.id === "watering")).toMatchObject({
+      enabled: false,
+      w: 1,
+      h: 1,
     });
 
     const get = await fetch(`${base}/studio/layout`);

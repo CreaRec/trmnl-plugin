@@ -13,6 +13,7 @@ const BLOCK_IDS = [
   "weather_tomorrow",
   "battery",
   "trash",
+  "watering",
   "calendar",
   "shopping",
 ];
@@ -22,6 +23,7 @@ const LABELS = {
   weather_tomorrow: "Weather · Tomorrow",
   battery: "Battery",
   trash: "Waste",
+  watering: "Watering",
   calendar: "Calendar",
   shopping: "Shopping",
 };
@@ -30,7 +32,7 @@ const LABELS = {
 /** @typedef {{ version: number, updated_at: string, grid: { cols: number, rows: number }, blocks: LayoutBlock[] }} StudioLayout */
 
 function defaultEnabledFor(id) {
-  return id !== "shopping";
+  return id !== "shopping" && id !== "watering";
 }
 
 function isBlockEnabled(block) {
@@ -38,12 +40,12 @@ function isBlockEnabled(block) {
 }
 
 function minSizeFor(id) {
-  if (id === "battery" || id === "trash") return { w: 1, h: 1 };
+  if (id === "battery" || id === "trash" || id === "watering") return { w: 1, h: 1 };
   return { w: MIN_W, h: MIN_H };
 }
 
 function fixedSizeFor(id) {
-  if (id === "battery" || id === "trash") return { w: 1, h: 1 };
+  if (id === "battery" || id === "trash" || id === "watering") return { w: 1, h: 1 };
   return null;
 }
 
@@ -55,6 +57,7 @@ function defaultBlockRects() {
     { id: "trash", x: 10, y: 0, w: 1, h: 1, enabled: true },
     { id: "calendar", x: 0, y: 4, w: 12, h: 4, enabled: true },
     { id: "shopping", x: 8, y: 0, w: 2, h: 3, enabled: false },
+    { id: "watering", x: 11, y: 1, w: 1, h: 1, enabled: false },
   ];
 }
 
@@ -459,6 +462,23 @@ function trashCardHtml(poll) {
     </div>`;
 }
 
+function wateringIconHtml(label) {
+  return `<svg class="creafridge-watering text--green" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" aria-label="${esc(label)}" role="img">
+      <path fill="currentColor" d="M9.1 3h4.8a1 1 0 0 1 .9.6L16 6.5h1c.83 0 1.5.67 1.5 1.5 0 .28-.08.54-.22.76l2.05 1.37a1 1 0 1 1-1.1 1.67L17.28 9.5H16.5V18a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2V9.5H4.5a1.5 1.5 0 0 1 0-3H8l1.2-2.4A1 1 0 0 1 9.1 3zm-.5 3L7.9 7.5h7.2L14.4 6H8.6zM7.5 9.5V18h7V9.5h-7z"/>
+    </svg>`;
+}
+
+function wateringCardHtml(poll) {
+  const watering = poll?.watering;
+  const icon = watering?.active
+    ? wateringIconHtml(watering.label || "Watering")
+    : "";
+  return `
+    <div class="outline rounded--medium studio-block__card creafridge-watering-cell">
+      ${icon}
+    </div>`;
+}
+
 function calendarCardHtml(poll) {
   const days = Array.isArray(poll?.days) ? poll.days : [];
   const events = Array.isArray(poll?.events) ? poll.events : [];
@@ -556,6 +576,8 @@ function blockCardHtml(block, poll) {
       return batteryCardHtml(poll);
     case "trash":
       return trashCardHtml(poll);
+    case "watering":
+      return wateringCardHtml(poll);
     case "calendar":
       return calendarCardHtml(poll);
     case "shopping":
