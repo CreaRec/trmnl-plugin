@@ -6,12 +6,15 @@ import {
   clampBlockRect,
   defaultStudioLayout,
   expandLegacyStatusBlocks,
+  findFreePlacement,
   fixedSizeFor,
   isBlockEnabled,
   migrateV1BlocksToV2,
   minSizeFor,
   rectsOverlap,
+  resolveEnablePlacement,
   validateStudioLayout,
+  wouldOverlap,
 } from "../src/studio-layout.js";
 import { renderStudioLiquid } from "../src/studio-liquid.js";
 
@@ -254,6 +257,104 @@ describe("studio-layout v2", () => {
         { x: 5, y: 0, w: 6, h: 3 },
       ),
     ).toBe(true);
+  });
+
+  it("findFreePlacement scans left-to-right, top-to-bottom", () => {
+    const blocks = [
+      { id: "weather_today", x: 0, y: 0, w: 4, h: 3, enabled: true },
+      { id: "weather_tomorrow", x: 4, y: 0, w: 4, h: 3, enabled: true },
+      { id: "battery", x: 11, y: 0, w: 1, h: 1, enabled: true },
+      { id: "trash", x: 10, y: 0, w: 1, h: 1, enabled: true },
+      { id: "calendar", x: 0, y: 4, w: 12, h: 4, enabled: true },
+      { id: "shopping", x: 8, y: 0, w: 2, h: 3, enabled: true },
+      { id: "watering", x: 11, y: 1, w: 1, h: 1, enabled: false },
+    ];
+    // First free 1×1 with shopping on: under trash at (10,1)
+    expect(findFreePlacement(blocks, { w: 1, h: 1 }, "watering")).toEqual({
+      x: 10,
+      y: 1,
+    });
+    // With shopping disabled, first free 1×1 is shopping's saved seat (8,0)
+    const shoppingOff = blocks.map((b) =>
+      b.id === "shopping" ? { ...b, enabled: false } : b,
+    );
+    expect(findFreePlacement(shoppingOff, { w: 1, h: 1 }, "watering")).toEqual({
+      x: 8,
+      y: 0,
+    });
+  });
+
+  it("findFreePlacement returns null when grid has no free slot of that size", () => {
+    // Fill entire 12×8 with two halves
+    const blocks = [
+      { id: "weather_today", x: 0, y: 0, w: 6, h: 8, enabled: true },
+      { id: "weather_tomorrow", x: 6, y: 0, w: 6, h: 8, enabled: true },
+      { id: "watering", x: 0, y: 0, w: 1, h: 1, enabled: false },
+    ];
+    expect(findFreePlacement(blocks, { w: 1, h: 1 }, "watering")).toBeNull();
+    expect(findFreePlacement(blocks, { w: 2, h: 3 }, "shopping")).toBeNull();
+  });
+
+  it("resolveEnablePlacement keeps free default watering seat", () => {
+    const layout = defaultStudioLayout();
+    const watering = layout.blocks.find((b) => b.id === "watering")!;
+    expect(resolveEnablePlacement(layout.blocks, watering)).toEqual({
+      x: 11,
+      y: 1,
+      w: 1,
+      h: 1,
+    });
+  });
+
+  it("resolveEnablePlacement relocates watering when default seat is covered", () => {
+    // Crowded layout like the Studio screenshot: shopping tall on the right,
+    // watering's default (11,1) overlaps shopping, but free 1×1 cells remain.
+    const blocks = [
+      { id: "weather_today", x: 0, y: 1, w: 4, h: 3, enabled: true },
+      { id: "weather_tomorrow", x: 4, y: 1, w: 4, h: 3, enabled: true },
+      { id: "battery", x: 0, y: 0, w: 1, h: 1, enabled: true },
+      { id: "trash", x: 3, y: 0, w: 1, h: 1, enabled: true },
+      { id: "calendar", x: 0, y: 4, w: 12, h: 4, enabled: true },
+      { id: "shopping", x: 8, y: 0, w: 4, h: 4, enabled: true },
+      { id: "watering", x: 11, y: 1, w: 1, h: 1, enabled: false },
+    ];
+    expect(wouldOverlap(blocks, { ...blocks[6]!, enabled: true }, "watering")).toBe(
+      true,
+    );
+    const placed = resolveEnablePlacement(blocks, blocks[6]!);
+    expect(placed).toEqual({ x: 1, y: 0, w: 1, h: 1 });
+    expect(
+      wouldOverlap(blocks, { ...placed!, enabled: true }, "watering"),
+    ).toBe(false);
+  });
+
+  it("resolveEnablePlacement relocates shopping when default gap is taken", () => {
+    const blocks = [
+      { id: "weather_today", x: 0, y: 0, w: 5, h: 3, enabled: true },
+      { id: "weather_tomorrow", x: 5, y: 0, w: 5, h: 3, enabled: true },
+      { id: "battery", x: 11, y: 0, w: 1, h: 1, enabled: true },
+      { id: "trash", x: 10, y: 0, w: 1, h: 1, enabled: true },
+      { id: "calendar", x: 0, y: 5, w: 12, h: 3, enabled: true },
+      // Default shopping (8,0 2×3) overlaps expanded weather — but row y=3 is free
+      { id: "shopping", x: 8, y: 0, w: 2, h: 3, enabled: false },
+      { id: "watering", x: 11, y: 1, w: 1, h: 1, enabled: false },
+    ];
+    const shopping = blocks.find((b) => b.id === "shopping")!;
+    const placed = resolveEnablePlacement(blocks, shopping);
+    // First free 2×3 is beside the icons under trash/battery, not the default gap
+    expect(placed).toEqual({ x: 10, y: 1, w: 2, h: 3 });
+    expect(
+      wouldOverlap(blocks, { ...placed!, enabled: true }, "shopping"),
+    ).toBe(false);
+  });
+
+  it("resolveEnablePlacement returns null when no free placement exists", () => {
+    const blocks = [
+      { id: "weather_today", x: 0, y: 0, w: 6, h: 8, enabled: true },
+      { id: "weather_tomorrow", x: 6, y: 0, w: 6, h: 8, enabled: true },
+      { id: "watering", x: 11, y: 1, w: 1, h: 1, enabled: false },
+    ];
+    expect(resolveEnablePlacement(blocks, blocks[2]!)).toBeNull();
   });
 
   it("renderStudioLiquid omits disabled shopping/watering and includes grid markers", () => {
