@@ -2,6 +2,7 @@ import { loadConfig, type AppConfig } from "./config.js";
 import { fetchCalendar, type CalendarDay, type CalendarEvent } from "./calendar.js";
 import { fetchWeather, type WeatherPayload } from "./weather.js";
 import { getWasteInfo, type WasteInfo } from "./waste.js";
+import { getWateringInfo, type WateringInfo } from "./watering.js";
 import {
   fetchShopping,
   type ShoppingPayload,
@@ -13,6 +14,7 @@ export type PollPayload = {
   updated_at: string;
   weather: WeatherPayload;
   waste: WasteInfo;
+  watering: WateringInfo;
   events: CalendarEvent[];
   days: CalendarDay[];
   shopping: ShoppingPayload;
@@ -69,6 +71,7 @@ export async function buildPollPayload(
     updated_at: now.toISOString(),
     weather,
     waste: getWasteInfo(now, config.weatherTz),
+    watering: getWateringInfo(now, config.weatherTz),
     events: calendar.events,
     days: calendar.days,
     shopping,

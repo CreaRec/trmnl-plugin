@@ -16,7 +16,7 @@ import {
 import { renderStudioLiquid } from "../src/studio-liquid.js";
 
 describe("studio-layout v2", () => {
-  it("default layout is v2 with shopping disabled by default", () => {
+  it("default layout is v2 with shopping and watering disabled by default", () => {
     const layout = defaultStudioLayout();
     expect(layout.version).toBe(STUDIO_LAYOUT_VERSION);
     expect(layout.version).toBe(2);
@@ -28,13 +28,17 @@ describe("studio-layout v2", () => {
       { id: "trash", x: 10, y: 0, w: 1, h: 1, enabled: true },
       { id: "calendar", x: 0, y: 4, w: 12, h: 4, enabled: true },
       { id: "shopping", x: 8, y: 0, w: 2, h: 3, enabled: false },
+      { id: "watering", x: 11, y: 1, w: 1, h: 1, enabled: false },
     ]);
     expect(isBlockEnabled(layout.blocks.find((b) => b.id === "shopping")!)).toBe(
       false,
     );
+    expect(isBlockEnabled(layout.blocks.find((b) => b.id === "watering")!)).toBe(
+      false,
+    );
   });
 
-  it("migrates v1 half/full to default cell rects and fills shopping", () => {
+  it("migrates v1 half/full to default cell rects and fills shopping/watering", () => {
     const migrated = migrateV1BlocksToV2([
       { id: "calendar", width: "full" },
       { id: "battery", width: "full" },
@@ -48,6 +52,7 @@ describe("studio-layout v2", () => {
       "trash",
       "weather_today",
       "weather_tomorrow",
+      "watering",
       "shopping",
     ]);
     expect(migrated.find((b) => b.id === "weather_today")).toMatchObject({
@@ -59,6 +64,11 @@ describe("studio-layout v2", () => {
     });
     expect(migrated.find((b) => b.id === "shopping")).toMatchObject({
       enabled: false,
+    });
+    expect(migrated.find((b) => b.id === "watering")).toMatchObject({
+      enabled: false,
+      w: 1,
+      h: 1,
     });
   });
 
@@ -90,7 +100,7 @@ describe("studio-layout v2", () => {
     });
   });
 
-  it("validateStudioLayout upgrades v1 status payload to battery+trash+shopping", () => {
+  it("validateStudioLayout upgrades v1 status payload to battery+trash+shopping+watering", () => {
     const layout = validateStudioLayout({
       version: 1,
       blocks: [
@@ -109,15 +119,17 @@ describe("studio-layout v2", () => {
       "battery",
       "trash",
       "calendar",
+      "watering",
       "shopping",
     ]);
     expect(layout.blocks.every((b) => "x" in b && "w" in b && "enabled" in b)).toBe(
       true,
     );
     expect(layout.blocks.find((b) => b.id === "shopping")?.enabled).toBe(false);
+    expect(layout.blocks.find((b) => b.id === "watering")?.enabled).toBe(false);
   });
 
-  it("auto-fills missing shopping on older v2 layouts", () => {
+  it("auto-fills missing shopping and watering on older v2 layouts", () => {
     const layout = validateStudioLayout({
       version: 2,
       blocks: [
@@ -136,9 +148,17 @@ describe("studio-layout v2", () => {
       w: 2,
       h: 3,
     });
+    expect(layout.blocks.map((b) => b.id)).toContain("watering");
+    expect(layout.blocks.find((b) => b.id === "watering")).toMatchObject({
+      enabled: false,
+      x: 11,
+      y: 1,
+      w: 1,
+      h: 1,
+    });
   });
 
-  it("locks battery/trash to 1×1 when larger rects are submitted", () => {
+  it("locks battery/trash/watering to 1×1 when larger rects are submitted", () => {
     const layout = validateStudioLayout({
       version: 2,
       blocks: [
@@ -146,6 +166,7 @@ describe("studio-layout v2", () => {
         { id: "weather_tomorrow", x: 6, y: 0, w: 6, h: 3 },
         { id: "battery", x: 0, y: 3, w: 4, h: 2 },
         { id: "trash", x: 1, y: 3, w: 3, h: 2 },
+        { id: "watering", x: 2, y: 3, w: 3, h: 2 },
         { id: "calendar", x: 0, y: 4, w: 12, h: 4 },
       ],
     });
@@ -157,14 +178,20 @@ describe("studio-layout v2", () => {
       w: 1,
       h: 1,
     });
+    expect(layout.blocks.find((b) => b.id === "watering")).toMatchObject({
+      w: 1,
+      h: 1,
+    });
   });
 
   it("fixedSizeFor / minSizeFor lock icon blocks", () => {
     expect(fixedSizeFor("battery")).toEqual({ w: 1, h: 1 });
     expect(fixedSizeFor("trash")).toEqual({ w: 1, h: 1 });
+    expect(fixedSizeFor("watering")).toEqual({ w: 1, h: 1 });
     expect(fixedSizeFor("calendar")).toBeNull();
     expect(minSizeFor("battery")).toEqual({ w: 1, h: 1 });
     expect(minSizeFor("trash")).toEqual({ w: 1, h: 1 });
+    expect(minSizeFor("watering")).toEqual({ w: 1, h: 1 });
   });
 
   it("clamps blocks to grid bounds and min size", () => {
@@ -229,7 +256,7 @@ describe("studio-layout v2", () => {
     ).toBe(true);
   });
 
-  it("renderStudioLiquid omits disabled shopping and includes grid markers", () => {
+  it("renderStudioLiquid omits disabled shopping/watering and includes grid markers", () => {
     const liquid = renderStudioLiquid(defaultStudioLayout());
     expect(liquid).toMatch(/creafridge-grid/);
     expect(liquid).toMatch(/grid-template-columns:\s*repeat\(12/);
@@ -248,10 +275,12 @@ describe("studio-layout v2", () => {
     expect(liquid).not.toMatch(/grid--cols-4/);
     expect(liquid).toMatch(/text--red/);
     expect(liquid).not.toMatch(/creafridge-status/);
-    // Shopping disabled by default → no shopping Liquid bindings in the grid
+    // Shopping/watering disabled by default → no Liquid bindings in the grid
     expect(liquid).not.toMatch(/shopping\.items/);
     expect(liquid).not.toMatch(/shopping\.label/);
     expect(liquid).not.toMatch(/Set TODOIST_API_TOKEN/);
+    expect(liquid).not.toMatch(/watering\.active/);
+    expect(liquid).not.toMatch(/watering\.label/);
   });
 
   it("renderStudioLiquid includes shopping when enabled", () => {
@@ -267,5 +296,17 @@ describe("studio-layout v2", () => {
     expect(liquid).not.toContain("✓");
     expect(liquid).not.toContain("checkbox");
     expect(liquid).not.toContain("data-shopping-id");
+  });
+
+  it("renderStudioLiquid includes watering when enabled", () => {
+    const layout = defaultStudioLayout();
+    const watering = layout.blocks.find((b) => b.id === "watering")!;
+    watering.enabled = true;
+    const liquid = renderStudioLiquid(layout);
+    expect(liquid).toMatch(/creafridge-watering-cell/);
+    expect(liquid).toMatch(/watering\.active/);
+    expect(liquid).toMatch(/text--green/);
+    expect(liquid).toMatch(/creafridge-watering/);
+    expect(liquid).toMatch(/color: #27ae60/);
   });
 });
