@@ -160,12 +160,12 @@ function trashSnippet(): string {
 </div>`;
 }
 
-/** Green watering-can icon when watering.active (Tue/Fri); else empty 1×1 cell. */
+/** Green droplet icon when watering.active (Tue/Fri); else empty 1×1 cell. */
 function wateringSnippet(): string {
   return `<div class="outline rounded--medium creafridge-watering-cell" style="height:100%;box-sizing:border-box;overflow:hidden;">
   {% if watering.active %}
-    <svg class="creafridge-watering text--green" viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" aria-label="{{ watering.label | default: 'Watering' }}" role="img">
-      <path fill="currentColor" d="M9.1 3h4.8a1 1 0 0 1 .9.6L16 6.5h1c.83 0 1.5.67 1.5 1.5 0 .28-.08.54-.22.76l2.05 1.37a1 1 0 1 1-1.1 1.67L17.28 9.5H16.5V18a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2V9.5H4.5a1.5 1.5 0 0 1 0-3H8l1.2-2.4A1 1 0 0 1 9.1 3zm-.5 3L7.9 7.5h7.2L14.4 6H8.6zM7.5 9.5V18h7V9.5h-7z"/>
+    <svg class="creafridge-watering text--green" viewBox="0 0 16 16" preserveAspectRatio="xMidYMid meet" aria-label="{{ watering.label | default: 'Watering' }}" role="img">
+      <path fill="currentColor" d="M8 1.5C8 1.5 3 7.2 3 10.5a5 5 0 0 0 10 0C13 7.2 8 1.5 8 1.5z"/>
     </svg>
   {% endif %}
 </div>`;
